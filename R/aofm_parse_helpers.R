@@ -121,6 +121,10 @@ aofm_transactional_measure_columns <- function(data, required, context) {
     ),
     collapse = "|"
   )
+  official_measure_columns <- c(
+    "lowest_offer",
+    "weighted_average_offer"
+  )
   measure_columns <- candidates[vapply(candidates, function(column) {
     value <- data[[column]]
     if (is.numeric(value) || is.logical(value)) return(any(!is.na(value)))
@@ -129,6 +133,7 @@ aofm_transactional_measure_columns <- function(data, required, context) {
     if (!any(present)) return(FALSE)
     parsed <- suppressWarnings(as.numeric(gsub(",", "", raw, fixed = TRUE)))
     all(!present | !is.na(parsed)) ||
+      column %in% official_measure_columns ||
       grepl(measure_pattern, column, ignore.case = TRUE)
   }, logical(1))]
   if (!length(measure_columns)) {

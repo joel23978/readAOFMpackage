@@ -568,6 +568,30 @@ test_that("official-shaped buybacks preserve their method identifier", {
   }
 })
 
+test_that("official buyback offer measures reject malformed nonblank values", {
+  required <- c("date_held", "maturity", "date_settled")
+  for (column in c("lowest_offer", "weighted_average_offer")) {
+    data <- data.frame(
+      date_held = as.Date(c("2026-05-01", "2026-06-01")),
+      tender_number_buyback_method = c("RBA", "TBB1"),
+      maturity = as.Date(c("2028-04-21", "2029-04-21")),
+      amount_repurchased = c(100, 120),
+      date_settled = as.Date(c("2026-05-05", "2026-06-05")),
+      stringsAsFactors = FALSE
+    )
+    data[[column]] <- c(NA_character_, "schema-drift")
+
+    expect_error(
+      readAOFM:::aofm_transactional_measure_columns(
+        data,
+        required,
+        "read_transactional(tb_buyback)"
+      ),
+      paste0(column, ".*row\\(s\\) 2")
+    )
+  }
+})
+
 test_that("offline fixtures cover every parser and special schema branch", {
   cases <- list(
     summary = "summary.xlsx",
