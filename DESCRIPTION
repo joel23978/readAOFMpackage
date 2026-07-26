@@ -1,9 +1,9 @@
 Package: readAOFM
 Title: Reads data from the AOFM's dataHub
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: 
     person("Joel", "Findlay", , "joel.findlay@gmail.com", role = c("aut", "cre"))
-Description: Downloads, imports, and tidies time series data from the Australian Office of Financial Mnagement DataHub.
+Description: Downloads, imports, and tidies time series data from the Australian Office of Financial Management DataHub.
 License: MIT + file LICENSE
 URL: https://joel23978.github.io/readAOFM/
 BugReports: https://github.com/joel23978/readAOFM/issues

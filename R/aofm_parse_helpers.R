@@ -162,18 +162,25 @@ aofm_parse_eom_workbook <- function(path, aofm_table, csv = FALSE) {
   aofm_validate_workbook(path, 5, context)
 
   tmp1 <- read_excel_allsheets(path)
-  if (length(tmp1) < 5) {
-    stop(sprintf("%s: expected at least 5 sheets but found %d", context, length(tmp1)), call. = FALSE)
+  data_indices <- which(!grepl("^notes\\b", names(tmp1), ignore.case = TRUE))
+  if (length(data_indices) < 4) {
+    stop(
+      sprintf(
+        "%s: expected at least FaceValue, MarketValue, Delta and Duration sheets",
+        context
+      ),
+      call. = FALSE
+    )
   }
 
   return.data <- list()
-  for (i in 2:5) {
+  for (i in data_indices) {
     output.name <- paste0(aofm_table, "_", names(tmp1)[i])
     output.name.csv <- paste0(output.name, ".csv")
 
     m <- if (grepl("tb|tib", aofm_table)) 5 else 4
     tmp_sheet <- tmp1[[i]]
-  aofm_require_rows(tmp_sheet, m + 1, context)
+    aofm_require_rows(tmp_sheet, m + 1, context)
 
     tmp2 <- tmp_sheet[1:m, ] %>%
       data.table::transpose()
@@ -201,6 +208,18 @@ aofm_parse_eom_workbook <- function(path, aofm_table, csv = FALSE) {
       janitor::row_to_names(row_number = 1)
 
     eom_id_cols <- names(tmp4)[seq_len(m)]
+    if (grepl("tb|tib|tn", aofm_table)) {
+      security_key <- do.call(
+        paste,
+        c(lapply(tmp4[eom_id_cols], as.character), sep = "\r")
+      )
+      tmp4$Series <- ave(
+        seq_along(security_key),
+        security_key,
+        FUN = seq_along
+      )
+      eom_id_cols <- c(eom_id_cols, "Series")
+    }
     tmp4 <- tmp4 %>%
       tidyr::pivot_longer(cols = -dplyr::all_of(eom_id_cols), names_to = "date")
 
@@ -208,8 +227,15 @@ aofm_parse_eom_workbook <- function(path, aofm_table, csv = FALSE) {
 
     if (grepl("tb|tib|tn", aofm_table)) {
       aofm_require_columns(tmp4, "Maturity", context)
-      tmp4$Maturity <- as.character(aofm_excel_date(tmp4$Maturity, origin = "1899-12-30"))
-      tmp4$Maturity <- tidyr::replace_na(tmp4$Maturity, "total")
+      maturity_raw <- trimws(as.character(tmp4$Maturity))
+      maturity_number <- suppressWarnings(as.numeric(maturity_raw))
+      maturity_date <- as.Date(maturity_number, origin = "1899-12-30")
+      tmp4$Maturity <- ifelse(
+        !is.na(maturity_date),
+        format(maturity_date, "%Y-%m-%d"),
+        maturity_raw
+      )
+      tmp4$Maturity[is.na(tmp4$Maturity) | !nzchar(tmp4$Maturity)] <- "total"
     }
 
     tmp4 <- tmp4 %>%
@@ -375,14 +401,18 @@ aofm_parse_secondary_workbook <- function(path, aofm_table, csv = FALSE) {
 
 aofm_parse_premium_workbook <- function(path, aofm_table, csv = FALSE) {
   context <- sprintf("read_premium(%s)", aofm_table)
-  aofm_validate_workbook(path, 2, context)
+  sheet_names <- aofm_validate_workbook(path, 3, context)
+  data_sheets <- sheet_names[!grepl("^notes\\b", sheet_names, ignore.case = TRUE)]
+  if (length(data_sheets) < 2) {
+    stop(sprintf("%s: expected at least two term-premium data sheets", context), call. = FALSE)
+  }
 
-  sheet_list <- lapply(1:2, function(i) {
-    tmp1 <- readxl::read_excel(path, sheet = i, skip = 1) %>%
+  sheet_list <- lapply(data_sheets, function(sheet_name) {
+    tmp1 <- readxl::read_excel(path, sheet = sheet_name, skip = 1) %>%
       janitor::clean_names() %>%
       dplyr::mutate(
         date = aofm_excel_date(date, origin = "1899-12-30"),
-        type = colnames(readxl::read_excel(path, sheet = i, range = readxl::cell_rows(1)))[1]
+        type = sheet_name
       )
 
     aofm_require_columns(tmp1, "date", context)
@@ -413,7 +443,7 @@ aofm_parse_ownership_workbook <- function(path, aofm_table, csv = FALSE) {
   if (grepl("public", aofm_table)) {
     sheet_indices <- 1:2
     top_rows <- 1:4
-    n <- max(top_rows)
+    n <- max(top_rows) + 1
   } else {
     sheet_indices <- 2:4
     top_rows <- 1:4
@@ -454,6 +484,8 @@ aofm_parse_ownership_workbook <- function(path, aofm_table, csv = FALSE) {
       `colnames<-`(.[1,]) %>%
       janitor::row_to_names(row_number = 1)
 
+    names(tmp4) <- make.unique(names(tmp4), sep = "_")
+
     ownership_id_cols <- names(tmp4)[seq_len(n - 1)]
     tmp4 <- tmp4 %>%
       tidyr::pivot_longer(cols = -dplyr::all_of(ownership_id_cols), names_to = "date")
@@ -468,7 +500,7 @@ aofm_parse_ownership_workbook <- function(path, aofm_table, csv = FALSE) {
         stats::na.omit()
     } else {
       tmp5 <- tmp4 %>%
-        dplyr::mutate(date = aofm_excel_date(date, origin = "1970-01-01")) %>%
+        dplyr::mutate(date = aofm_excel_date(date, origin = "1899-12-30")) %>%
         dplyr::distinct() %>%
         dplyr::mutate(value = as.numeric(value)) %>%
         stats::na.omit()

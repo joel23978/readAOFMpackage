@@ -223,7 +223,8 @@ test_that("read_aofm parses tb dealt positions from a fixture workbook", {
   x <- read_aofm("tb", "dealt")
 
   expect_type(x, "list")
-  expect_equal(length(x), 4)
+  expect_equal(length(x), 5)
+  expect_true(any(grepl("Tenor", names(x), fixed = TRUE)))
   expect_true(all(vapply(x, is.data.frame, logical(1))))
   expect_true(any(grepl("FaceValue", names(x), fixed = TRUE)))
 })
