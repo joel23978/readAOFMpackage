@@ -213,7 +213,7 @@ aofm_parse_eom_workbook <- function(path, aofm_table, csv = FALSE) {
         paste,
         c(lapply(tmp4[eom_id_cols], as.character), sep = "\r")
       )
-      tmp4$Series <- ave(
+      tmp4$Series <- stats::ave(
         seq_along(security_key),
         security_key,
         FUN = seq_along
