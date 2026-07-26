@@ -105,6 +105,7 @@ aofm_transactional_measure_columns <- function(data, required, context) {
   identifiers <- unique(c(
     required,
     "tender_number",
+    "tender_number_buyback_method",
     "isin",
     "security",
     "bond_line",
@@ -122,11 +123,12 @@ aofm_transactional_measure_columns <- function(data, required, context) {
   )
   measure_columns <- candidates[vapply(candidates, function(column) {
     value <- data[[column]]
-    if (is.numeric(value) || is.logical(value)) return(TRUE)
+    if (is.numeric(value) || is.logical(value)) return(any(!is.na(value)))
     raw <- trimws(as.character(value))
     present <- !is.na(value) & nzchar(raw)
+    if (!any(present)) return(FALSE)
     parsed <- suppressWarnings(as.numeric(gsub(",", "", raw, fixed = TRUE)))
-    (any(present) && all(!present | !is.na(parsed))) ||
+    all(!present | !is.na(parsed)) ||
       grepl(measure_pattern, column, ignore.case = TRUE)
   }, logical(1))]
   if (!length(measure_columns)) {

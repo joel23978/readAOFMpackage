@@ -514,6 +514,60 @@ test_that("lock release preserves a replacement owner", {
   expect_false(dir.exists(lock))
 })
 
+test_that("official-shaped buybacks preserve their method identifier", {
+  expected_headers <- c(
+    "date_held",
+    "tender_number_buyback_method",
+    "maturity",
+    "coupon",
+    "isin",
+    "amount_repurchased",
+    "amount_of_offers",
+    "weighted_average_repurchase_yield",
+    "lowest_accepted_yield",
+    "highest_accepted_yield",
+    "lowest_offer",
+    "weighted_average_offer",
+    "secondary_market_mid_rate",
+    "number_of_offers",
+    "number_of_successful_offers",
+    "number_of_offers_accepted_in_full",
+    "settlement_proceeds",
+    "date_settled"
+  )
+  cases <- list(
+    tb_buyback = list(
+      file = "tb_buyback.xlsx",
+      methods = c("RBA", "TBB1"),
+      omitted_measures = character()
+    ),
+    tib_buyback = list(
+      file = "tib_buyback.xlsx",
+      methods = c("Syndication", "TIBB1"),
+      omitted_measures = expected_headers[9:16]
+    )
+  )
+
+  for (table_id in names(cases)) {
+    case <- cases[[table_id]]
+    path <- fixture_path(case$file)
+    header <- readxl::read_excel(path)[1, , drop = FALSE]
+    expect_identical(
+      janitor::make_clean_names(as.character(header)),
+      expected_headers
+    )
+
+    parsed <- read_aofm_file(path, table_id)
+    expect_setequal(
+      unique(parsed$tender_number_buyback_method),
+      case$methods
+    )
+    expect_false("tender_number_buyback_method" %in% parsed$name)
+    expect_type(parsed$value, "double")
+    expect_false(any(case$omitted_measures %in% parsed$name))
+  }
+})
+
 test_that("offline fixtures cover every parser and special schema branch", {
   cases <- list(
     summary = "summary.xlsx",
@@ -526,9 +580,9 @@ test_that("offline fixtures cover every parser and special schema branch", {
     tn_position_dealt = "tn_position_dealt.xlsx",
     tn_position_settlement = "tn_position_dealt.xlsx",
     tb_issuance = "tb_issuance.xlsx",
-    tb_buyback = "tib_issuance.xlsx",
+    tb_buyback = "tb_buyback.xlsx",
     tib_issuance = "tib_issuance.xlsx",
-    tib_buyback = "tib_issuance.xlsx",
+    tib_buyback = "tib_buyback.xlsx",
     tn_issuance = "tib_issuance.xlsx",
     retail = "retail.xlsx",
     slf = "slf.xlsx",
@@ -560,21 +614,23 @@ test_that("offline fixtures cover every parser and special schema branch", {
 })
 
 test_that("non-TB transaction dates use the canonical Excel date origin", {
-  raw <- readxl::read_excel(
-    fixture_path("tib_issuance.xlsx"),
-    sheet = 1,
-    col_names = FALSE
-  )[[1L]][[4L]]
-  expected <- as.Date(as.numeric(raw), origin = "1899-12-30")
+  cases <- c(
+    tib_issuance = "tib_issuance.xlsx",
+    tb_buyback = "tb_buyback.xlsx",
+    tib_buyback = "tib_buyback.xlsx",
+    tn_issuance = "tib_issuance.xlsx"
+  )
 
-  for (table_id in c(
-    "tib_issuance",
-    "tb_buyback",
-    "tib_buyback",
-    "tn_issuance"
-  )) {
+  for (table_id in names(cases)) {
+    file <- unname(cases[[table_id]])
+    raw <- readxl::read_excel(
+      fixture_path(file),
+      sheet = 1,
+      col_names = FALSE
+    )[[1L]][[4L]]
+    expected <- as.Date(as.numeric(raw), origin = "1899-12-30")
     parsed <- read_aofm_file(
-      fixture_path("tib_issuance.xlsx"),
+      fixture_path(file),
       table_id
     )
     expect_identical(min(parsed$date_held), expected)
@@ -635,7 +691,9 @@ test_that("remaining parsers route measures through strict conversion", {
     summary = "summary.xlsx",
     tb_position_dealt = "tb_position_dealt.xlsx",
     tb_syndication = "tb_syndication.xlsx",
-    ownership_public = "ownership_public.xlsx"
+    ownership_public = "ownership_public.xlsx",
+    tb_buyback = "tb_buyback.xlsx",
+    tib_buyback = "tib_buyback.xlsx"
   )
   original <- readAOFM:::aofm_numeric_measure
 

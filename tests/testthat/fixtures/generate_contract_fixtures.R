@@ -120,6 +120,76 @@ transactional_sheet <- function(title, headers, values) {
     values[[2L]]
   )
 }
+
+buyback_headers <- c(
+  "Date held",
+  "Tender Number/Buyback Method",
+  "Maturity",
+  "Coupon",
+  "ISIN",
+  "Amount Repurchased",
+  "Amount of Offers",
+  "Weighted Average Repurchase Yield",
+  "Lowest Accepted Yield",
+  "Highest Accepted Yield",
+  "Lowest Offer",
+  "Weighted Average Offer",
+  "Secondary Market Mid Rate",
+  "Number of Offers",
+  "Number of Successful Offers",
+  "Number of Offers Accepted in Full",
+  "Settlement Proceeds",
+  "Date Settled"
+)
+
+write_raw_workbook(
+  "tb_buyback.xlsx",
+  list(
+    Transactions = transactional_sheet(
+      "Synthetic Treasury Bond buyback transactions",
+      buyback_headers,
+      list(
+        c(
+          excel_serial("2026-05-01"), "RBA", excel_serial("2028-04-21"),
+          "3.25", "AU0000SYN001", "100", "", "", "", "", "", "", "",
+          "", "", "", "101.5", excel_serial("2026-05-05")
+        ),
+        c(
+          excel_serial("2026-06-01"), "TBB1", excel_serial("2029-04-21"),
+          "4.25", "AU0000SYN002", "120", "300", "4.10", "4.05", "4.15",
+          "4.00", "4.12", "4.08", "8", "4", "2", "121.2",
+          excel_serial("2026-06-05")
+        )
+      )
+    ),
+    Notes = matrix("Synthetic TB buyback notes", ncol = 1L)
+  )
+)
+
+write_raw_workbook(
+  "tib_buyback.xlsx",
+  list(
+    Transactions = transactional_sheet(
+      "Synthetic Treasury Indexed Bond buyback transactions",
+      buyback_headers,
+      list(
+        c(
+          excel_serial("2026-05-01"), "Syndication",
+          excel_serial("2030-08-20"), "2.50", "AU0000SYN003", "75", "150",
+          "2.40", "", "", "", "", "", "", "", "", "76.1",
+          excel_serial("2026-05-05")
+        ),
+        c(
+          excel_serial("2026-06-01"), "TIBB1", excel_serial("2035-08-20"),
+          "3.00", "AU0000SYN004", "80", "160", "2.55", "", "", "", "",
+          "", "", "", "", "81.4", excel_serial("2026-06-05")
+        )
+      )
+    ),
+    Notes = matrix("Synthetic TIB buyback notes", ncol = 1L)
+  )
+)
+
 write_raw_workbook(
   "retail.xlsx",
   list(
