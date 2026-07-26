@@ -107,6 +107,10 @@ aofm_search_score <- function(query, tokens, text, security, type, id) {
 #'   returning the catalog rows
 #' @param csv if `TRUE` and `read = TRUE`, also writes matched outputs to CSV
 #'   via `read_aofm()`
+#' @param timeout Per-attempt timeout used only when `read = TRUE`. Search
+#'   reads default to a single three-second attempt.
+#' @param retries Retries after the first attempt when `read = TRUE`.
+#' @param max_bytes Maximum accepted workbook size when `read = TRUE`.
 #' @returns A dataframe of supported table matches, or the result of
 #'   `read_aofm()` when `read = TRUE`
 #' @examples
@@ -116,10 +120,23 @@ aofm_search_score <- function(query, tokens, text, security, type, id) {
 #' search_aofm("inflation")
 #' \dontrun{search_aofm("tb issuance", read = TRUE)}
 #' @export
-search_aofm <- function(query, read = FALSE, csv = FALSE) {
+search_aofm <- function(
+    query,
+    read = FALSE,
+    csv = FALSE,
+    timeout = getOption("readAOFM.search_timeout", 3),
+    retries = getOption("readAOFM.search_retries", 0L),
+    max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)) {
   if (!is.character(query) || length(query) != 1 || is.na(query) || !nzchar(trimws(query))) {
     stop("`query` must be a single non-empty string.", call. = FALSE)
   }
+  if (!is.logical(read) || length(read) != 1L || is.na(read)) {
+    stop("`read` must be one non-missing logical value.", call. = FALSE)
+  }
+  if (!is.logical(csv) || length(csv) != 1L || is.na(csv)) {
+    stop("`csv` must be one non-missing logical value.", call. = FALSE)
+  }
+  aofm_validate_transport_bounds(timeout, retries, max_bytes)
 
   catalog <- aofm_search_catalog()
   normalized_query <- aofm_normalize_search_text(query)
@@ -175,7 +192,16 @@ search_aofm <- function(query, read = FALSE, csv = FALSE) {
   }
 
   results <- lapply(seq_len(nrow(matches)), function(i) {
-    read_aofm(matches$security[[i]], matches$type[[i]], csv = csv)
+    type <- matches$type[[i]]
+    if (is.na(type)) type <- NULL
+    read_aofm(
+      matches$security[[i]],
+      type,
+      csv = csv,
+      timeout = timeout,
+      retries = retries,
+      max_bytes = max_bytes
+    )
   })
   names(results) <- matches$id
 

@@ -43,23 +43,99 @@ aofm_excel_date <- function(x, origin = "1899-12-30") {
   }
 
   if (is.character(x)) {
-    numeric_x <- suppressWarnings(as.numeric(x))
-    if (all(is.na(x) | !is.na(numeric_x))) {
-      return(as.Date(numeric_x, origin = origin))
-    }
-
-    parsed_x <- tryCatch(
-      suppressWarnings(as.Date(x)),
-      error = function(e) rep(as.Date(NA), length(x))
+    raw <- trimws(x)
+    missing <- is.na(x) | !nzchar(raw)
+    numeric_x <- suppressWarnings(as.numeric(raw))
+    parsed_x <- rep(as.Date(NA), length(x))
+    numeric_rows <- !missing & !is.na(numeric_x)
+    parsed_x[numeric_rows] <- as.Date(numeric_x[numeric_rows], origin = origin)
+    date_rows <- !missing & is.na(numeric_x)
+    parsed_x[date_rows] <- vapply(
+      raw[date_rows],
+      function(value) {
+        as.numeric(tryCatch(
+          suppressWarnings(as.Date(value)),
+          error = function(error) as.Date(NA)
+        ))
+      },
+      numeric(1)
     )
-    if (all(is.na(parsed_x) == is.na(x) | is.na(parsed_x))) {
-      return(parsed_x)
+    invalid <- which(!missing & is.na(parsed_x))
+    if (length(invalid)) {
+      stop(
+        sprintf(
+          "Invalid date value at row(s) %s.",
+          paste(invalid, collapse = ", ")
+        ),
+        call. = FALSE
+      )
     }
-
-    return(x)
+    return(parsed_x)
   }
 
   as.Date(x)
+}
+
+aofm_numeric_measure <- function(x, column, context) {
+  if (is.numeric(x)) {
+    return(as.numeric(x))
+  }
+  if (is.logical(x)) {
+    return(as.numeric(x))
+  }
+  raw <- trimws(as.character(x))
+  missing <- is.na(x) | !nzchar(raw)
+  parsed <- suppressWarnings(as.numeric(gsub(",", "", raw, fixed = TRUE)))
+  invalid <- which(!missing & is.na(parsed))
+  if (length(invalid)) {
+    stop(
+      sprintf(
+        "%s: non-numeric value in measure column '%s' at row(s) %s",
+        context,
+        column,
+        paste(invalid, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+  parsed
+}
+
+aofm_transactional_measure_columns <- function(data, required, context) {
+  identifiers <- unique(c(
+    required,
+    "tender_number",
+    "isin",
+    "security",
+    "bond_line",
+    "series",
+    "type",
+    "transaction_type"
+  ))
+  candidates <- setdiff(names(data), identifiers)
+  measure_pattern <- paste(
+    c(
+      "amount", "coupon", "yield", "rate", "ratio", "number",
+      "proceeds", "price", "volume", "value", "spread", "fee"
+    ),
+    collapse = "|"
+  )
+  measure_columns <- candidates[vapply(candidates, function(column) {
+    value <- data[[column]]
+    if (is.numeric(value) || is.logical(value)) return(TRUE)
+    raw <- trimws(as.character(value))
+    present <- !is.na(value) & nzchar(raw)
+    parsed <- suppressWarnings(as.numeric(gsub(",", "", raw, fixed = TRUE)))
+    (any(present) && all(!present | !is.na(parsed))) ||
+      grepl(measure_pattern, column, ignore.case = TRUE)
+  }, logical(1))]
+  if (!length(measure_columns)) {
+    stop(sprintf("%s: no numeric measure columns found", context), call. = FALSE)
+  }
+  for (column in measure_columns) {
+    data[[column]] <- aofm_numeric_measure(data[[column]], column, context)
+  }
+  list(data = data, measure_columns = measure_columns)
 }
 
 aofm_require_columns <- function(data, required, context) {
@@ -293,15 +369,16 @@ aofm_parse_transactional_workbook <- function(path, aofm_table, csv = FALSE) {
   } else {
     tmp2 <- tmp1 %>%
       dplyr::mutate(
-        maturity = aofm_excel_date(maturity, origin = "1899-12-31"),
-        date_settled = aofm_excel_date(date_settled, origin = "1899-12-31"),
-        date_held = aofm_excel_date(date_held, origin = "1899-12-31")
+        maturity = aofm_excel_date(maturity, origin = "1899-12-30"),
+        date_settled = aofm_excel_date(date_settled, origin = "1899-12-30"),
+        date_held = aofm_excel_date(date_held, origin = "1899-12-30")
       )
   }
 
-  tmp3 <- tmp2 %>%
+  measures <- aofm_transactional_measure_columns(tmp2, required, context)
+  tmp3 <- measures$data %>%
     dplyr::select(where(not_all_na)) %>%
-    tidyr::pivot_longer(!colnames((.) %>% dplyr::select_if(~!is.numeric(.)))) %>%
+    tidyr::pivot_longer(dplyr::all_of(measures$measure_columns)) %>%
     dplyr::filter(!is.na(value))
 
   aofm_require_columns(tmp3, c("name", "value"), context)
@@ -388,9 +465,20 @@ aofm_parse_secondary_workbook <- function(path, aofm_table, csv = FALSE) {
       )
 
     aofm_require_columns(tmp1, "period", context)
+    measure_columns <- setdiff(names(tmp1), c("period", "group"))
+    if (!length(measure_columns)) {
+      stop(sprintf("%s: no turnover measure columns found", context), call. = FALSE)
+    }
+    for (column in measure_columns) {
+      tmp1[[column]] <- aofm_numeric_measure(
+        tmp1[[column]],
+        column,
+        context
+      )
+    }
 
     tmp1 %>%
-      tidyr::pivot_longer(!colnames(tmp1 %>% dplyr::select_if(~!is.numeric(.))))
+      tidyr::pivot_longer(dplyr::all_of(measure_columns))
   })
 
   tmp5 <- do.call(rbind, sheet_list)
@@ -416,9 +504,20 @@ aofm_parse_premium_workbook <- function(path, aofm_table, csv = FALSE) {
       )
 
     aofm_require_columns(tmp1, "date", context)
+    measure_columns <- setdiff(names(tmp1), c("date", "type"))
+    if (!length(measure_columns)) {
+      stop(sprintf("%s: no term-premium measure columns found", context), call. = FALSE)
+    }
+    for (column in measure_columns) {
+      tmp1[[column]] <- aofm_numeric_measure(
+        tmp1[[column]],
+        column,
+        context
+      )
+    }
 
     tmp1 %>%
-      tidyr::pivot_longer(!colnames(tmp1 %>% dplyr::select_if(~!is.numeric(.)))) %>%
+      tidyr::pivot_longer(dplyr::all_of(measure_columns)) %>%
       dplyr::filter(!is.na(value))
   })
 

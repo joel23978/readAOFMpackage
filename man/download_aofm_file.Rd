@@ -4,18 +4,44 @@
 \alias{download_aofm_file}
 \title{Download one AOFM workbook by stable table ID}
 \usage{
-download_aofm_file(table_id, path = tempdir(), overwrite = TRUE)
+download_aofm_file(
+  table_id,
+  path = tempdir(),
+  overwrite = TRUE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2),
+  max_age = getOption("readAOFM.max_age", 7 * 24 * 60^2),
+  max_files = getOption("readAOFM.max_files", 100L),
+  max_cache_bytes = getOption("readAOFM.max_cache_bytes", 500 * 1024^2),
+  lock_timeout = getOption("readAOFM.lock_timeout", 10)
+)
 }
 \arguments{
 \item{table_id}{A stable \code{table_id} returned by \code{\link[=aofm_catalog]{aofm_catalog()}}.}
 
-\item{path}{Directory in which to save the workbook.}
+\item{path}{Root directory for the package-owned \code{.readAOFM} cache.}
 
-\item{overwrite}{Replace an existing file when \code{TRUE}.}
+\item{overwrite}{Download and verify the current workbook even when a valid
+content-addressed cache entry exists.}
+
+\item{timeout}{Per-attempt transport timeout in seconds.}
+
+\item{retries}{Retries after the first attempt.}
+
+\item{max_bytes}{Maximum accepted workbook size.}
+
+\item{max_age}{Maximum cache-hit age in seconds.}
+
+\item{max_files}{Maximum retained content-addressed workbooks.}
+
+\item{max_cache_bytes}{Maximum total workbook bytes retained.}
+
+\item{lock_timeout}{Maximum seconds to wait for another table writer.}
 }
 \value{
 The normalized path to the downloaded workbook. The path has
-\code{table_id} and \code{source_url} attributes.
+exact source, SHA-256, byte, retrieval, and cache-hit metadata.
 }
 \description{
 Download one AOFM workbook by stable table ID

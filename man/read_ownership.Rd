@@ -4,12 +4,24 @@
 \alias{read_ownership}
 \title{Reads in and cleans data under "Ownership of Australia Government Securities" from the AOFM, returns cleaned in a long format}
 \usage{
-read_ownership(aofm_table, csv = FALSE)
+read_ownership(
+  aofm_table,
+  csv = FALSE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 }
 \arguments{
 \item{aofm_table}{object to download, typically called from read_aofm()}
 
 \item{csv}{if \code{TRUE}, also writes the parsed output to \verb{output/}}
+
+\item{timeout}{Per-attempt workbook transport timeout in seconds.}
+
+\item{retries}{Retries after the first workbook transport attempt.}
+
+\item{max_bytes}{Maximum accepted workbook size.}
 }
 \value{
 AOFM ownership data as a list, with elements relating to sheets in the original file

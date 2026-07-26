@@ -14,14 +14,33 @@ aofm_catalog_overrides <- function() {
   if (is.null(configured)) {
     return(defaults)
   }
-  if (!is.character(configured) || is.null(names(configured))) {
+  configured_names <- names(configured)
+  if (
+    !is.character(configured) ||
+      is.null(configured_names) ||
+      anyNA(configured) ||
+      anyNA(configured_names) ||
+      any(!nzchar(trimws(configured))) ||
+      any(!nzchar(trimws(configured_names))) ||
+      anyDuplicated(configured_names) ||
+      any(!configured_names %in% names(defaults))
+  ) {
     stop(
-      "`options(readAOFM.url_overrides = ...)` must be a named character vector.",
+      paste0(
+        "`options(readAOFM.url_overrides = ...)` must be a uniquely named ",
+        "character vector containing only supported override names."
+      ),
       call. = FALSE
     )
   }
+  for (name in configured_names) {
+    aofm_validate_official_url(
+      configured[[name]],
+      sprintf("AOFM URL override '%s'", name)
+    )
+  }
 
-  defaults[names(configured)] <- configured
+  defaults[configured_names] <- configured
   defaults
 }
 
@@ -43,11 +62,219 @@ aofm_table_row <- function(aofm_table) {
   aofm_apply_catalog_overrides(row)
 }
 
+aofm_validate_transport_bounds <- function(
+    timeout, retries, max_bytes, lock_timeout = 10) {
+  values <- list(
+    timeout = timeout,
+    retries = retries,
+    max_bytes = max_bytes,
+    lock_timeout = lock_timeout
+  )
+  if (any(!vapply(values, is.numeric, logical(1)))) {
+    stop("Transport bounds must be numeric.", call. = FALSE)
+  }
+  if (any(vapply(values, length, integer(1)) != 1L)) {
+    stop("Transport bounds must be scalar.", call. = FALSE)
+  }
+  numeric_values <- vapply(values, as.numeric, numeric(1))
+  if (anyNA(numeric_values) || any(!is.finite(numeric_values))) {
+    stop("Transport bounds must be finite numbers.", call. = FALSE)
+  }
+  if (
+    timeout <= 0 ||
+      max_bytes <= 0 ||
+      lock_timeout <= 0 ||
+      retries < 0 ||
+      retries != floor(retries) ||
+      timeout > 300 ||
+      retries > 5 ||
+      max_bytes > 1024^3 ||
+      lock_timeout > 300
+  ) {
+    stop(
+      "Timeouts and byte bounds must be positive; retries must be a non-negative integer.",
+      call. = FALSE
+    )
+  }
+  invisible(NULL)
+}
+
+aofm_validate_official_url <- function(url, context = "AOFM URL") {
+  if (
+    !is.character(url) ||
+      length(url) != 1L ||
+      is.na(url) ||
+      !nzchar(trimws(url))
+  ) {
+    stop(sprintf("%s must be one non-empty URL.", context), call. = FALSE)
+  }
+  parsed <- tryCatch(
+    curl::curl_parse_url(url),
+    error = function(error) {
+      stop(
+        sprintf("%s is invalid: %s", context, conditionMessage(error)),
+        call. = FALSE
+      )
+    }
+  )
+  if (
+    !identical(tolower(parsed$scheme), "https") ||
+      !tolower(parsed$host) %in% c("www.aofm.gov.au", "aofm.gov.au") ||
+      (!is.null(parsed$port) && !identical(parsed$port, "443")) ||
+      !is.null(parsed$user) ||
+      !is.null(parsed$password)
+  ) {
+    stop(
+      sprintf("%s must use official AOFM HTTPS infrastructure.", context),
+      call. = FALSE
+    )
+  }
+  invisible(url)
+}
+
+aofm_acquire_lock <- function(path, timeout = 10) {
+  started <- Sys.time()
+  repeat {
+    if (dir.create(path, recursive = FALSE, showWarnings = FALSE)) {
+      owner_path <- file.path(path, "owner.rds")
+      owner <- list(
+        pid = Sys.getpid(),
+        host = unname(Sys.info()[["nodename"]]),
+        created_at = as.POSIXct(Sys.time(), tz = "UTC")
+      )
+      stored <- tryCatch(
+        {
+          saveRDS(owner, owner_path, version = 3)
+          TRUE
+        },
+        error = function(error) FALSE
+      )
+      if (!stored) {
+        unlink(path, recursive = TRUE, force = TRUE)
+        stop("Could not record the AOFM cache lock owner.", call. = FALSE)
+      }
+      return(invisible(path))
+    }
+    info <- file.info(path)
+    age <- as.numeric(difftime(Sys.time(), info$mtime, units = "secs"))
+    if (!is.na(age) && age > max(60, timeout * 5)) {
+      owner <- tryCatch(
+        readRDS(file.path(path, "owner.rds")),
+        error = function(error) NULL
+      )
+      local_host <- unname(Sys.info()[["nodename"]])
+      owner_pid <- suppressWarnings(as.integer(owner$pid))
+      owner_is_local <- is.list(owner) &&
+        identical(as.character(owner$host), local_host) &&
+        length(owner_pid) == 1L &&
+        !is.na(owner_pid) &&
+        owner_pid > 0L
+      owner_alive <- if (owner_is_local) {
+        tryCatch(
+          isTRUE(tools::pskill(owner_pid, signal = 0L)),
+          error = function(error) FALSE
+        )
+      } else {
+        TRUE
+      }
+      if (owner_is_local && !owner_alive) {
+        unlink(path, recursive = TRUE, force = TRUE)
+        next
+      }
+    }
+    if (as.numeric(difftime(Sys.time(), started, units = "secs")) >= timeout) {
+      stop("Timed out waiting for an AOFM cache lock.", call. = FALSE)
+    }
+    Sys.sleep(0.05)
+  }
+}
+
+aofm_retry_after <- function(response, now = Sys.time(), maximum = 5) {
+  if (!is.list(response) || is.null(response$headers)) {
+    return(NA_real_)
+  }
+  headers <- response$headers
+  if (is.raw(headers)) headers <- rawToChar(headers)
+  headers <- paste(as.character(headers), collapse = "\n")
+  match <- regexec(
+    "(?im)^retry-after[[:space:]]*:[[:space:]]*([^\\r\\n]+)",
+    headers,
+    perl = TRUE
+  )
+  captured <- regmatches(headers, match)[[1L]]
+  if (length(captured) < 2L) return(NA_real_)
+  value <- trimws(captured[[2L]])
+  seconds <- suppressWarnings(as.numeric(value))
+  if (is.na(seconds)) {
+    retry_at <- tryCatch(curl::parse_date(value), error = function(error) NA)
+    seconds <- as.numeric(difftime(retry_at, now, units = "secs"))
+  }
+  if (is.na(seconds) || !is.finite(seconds) || seconds < 0) {
+    return(NA_real_)
+  }
+  min(seconds, maximum)
+}
+
+aofm_retry_delay <- function(response, attempt, maximum = 5) {
+  header_delay <- aofm_retry_after(response, maximum = maximum)
+  backoff <- min(0.25 * (2 ^ (attempt - 1L)), maximum)
+  if (is.na(header_delay)) backoff else max(backoff, header_delay)
+}
+
+aofm_response_header <- function(response, name) {
+  if (!is.list(response) || is.null(response$headers)) return(NA_character_)
+  headers <- response$headers
+  if (is.raw(headers)) headers <- rawToChar(headers)
+  headers <- paste(as.character(headers), collapse = "\n")
+  match <- regexec(
+    paste0(
+      "(?im)^",
+      gsub("-", "[-]", name, fixed = TRUE),
+      "[[:space:]]*:[[:space:]]*([^\\r\\n]+)"
+    ),
+    headers,
+    perl = TRUE
+  )
+  captured <- regmatches(headers, match)[[1L]]
+  if (length(captured) < 2L) NA_character_ else trimws(captured[[2L]])
+}
+
+aofm_absolute_redirect_url <- function(location, current_url) {
+  if (
+    !is.character(location) ||
+      length(location) != 1L ||
+      is.na(location) ||
+      !nzchar(trimws(location))
+  ) {
+    stop("AOFM redirect response omitted its Location URL.", call. = FALSE)
+  }
+  location <- trimws(location)
+  if (grepl("^https?://", location, ignore.case = TRUE)) return(location)
+  parsed <- curl::curl_parse_url(current_url)
+  authority <- paste0(
+    parsed$scheme,
+    "://",
+    parsed$host,
+    if (!is.null(parsed$port)) paste0(":", parsed$port) else ""
+  )
+  if (startsWith(location, "/")) return(paste0(authority, location))
+  base_path <- sub("[?#].*$", "", parsed$path)
+  base_path <- sub("[^/]*$", "", base_path)
+  paste0(authority, base_path, location)
+}
+
+aofm_sleep <- function(seconds) {
+  Sys.sleep(seconds)
+}
+
 download_aofm_workbook <- function(
     url,
     destfile,
-    timeout = getOption("readAOFM.timeout", 60),
-    retries = getOption("readAOFM.retries", 2L)) {
+    timeout = getOption("readAOFM.timeout", 30),
+    retries = getOption("readAOFM.retries", 1L),
+    max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2),
+    lock_timeout = getOption("readAOFM.lock_timeout", 10),
+    official_only = FALSE) {
   if (!is.character(url) || length(url) != 1L || is.na(url) || !nzchar(url)) {
     stop("`url` must be a single non-empty string.", call. = FALSE)
   }
@@ -66,22 +293,15 @@ download_aofm_workbook <- function(
     stop(sprintf("Could not create download directory '%s'.", dirname(destfile)), call. = FALSE)
   }
 
-  timeout <- suppressWarnings(as.numeric(timeout))
-  retries <- suppressWarnings(as.integer(retries))
-  if (length(timeout) != 1L || is.na(timeout) || timeout <= 0) {
-    stop("`timeout` must be one positive number of seconds.", call. = FALSE)
-  }
-  if (length(retries) != 1L || is.na(retries) || retries < 0L) {
-    stop("`retries` must be one non-negative integer.", call. = FALSE)
-  }
+  aofm_validate_transport_bounds(timeout, retries, max_bytes, lock_timeout)
+  timeout <- as.numeric(timeout)
+  retries <- as.integer(retries)
+  max_bytes <- as.numeric(max_bytes)
+  if (isTRUE(official_only)) aofm_validate_official_url(url)
 
-  handle <- curl::new_handle(
-    followlocation = TRUE,
-    maxredirs = 10L,
-    connecttimeout = min(timeout, 15),
-    timeout = timeout,
-    useragent = paste0("readAOFM/", utils::packageVersion("readAOFM"))
-  )
+  lock <- paste0(destfile, ".lock")
+  aofm_acquire_lock(lock, lock_timeout)
+  on.exit(unlink(lock, recursive = TRUE, force = TRUE), add = TRUE)
 
   temporary <- tempfile(
     pattern = paste0(".", basename(destfile), "-"),
@@ -93,20 +313,69 @@ download_aofm_workbook <- function(
   response <- NULL
   last_error <- NULL
   for (attempt in seq_len(retries + 1L)) {
-    unlink(temporary, force = TRUE)
-    response <- tryCatch(
-      curl::curl_fetch_disk(url, temporary, handle = handle),
-      error = function(e) {
-        last_error <<- conditionMessage(e)
-        NULL
+    request_url <- url
+    redirects <- 0L
+    repeat {
+      unlink(temporary, force = TRUE)
+      handle <- curl::new_handle(
+        followlocation = FALSE,
+        connecttimeout = min(timeout, 10),
+        timeout = timeout,
+        maxfilesize_large = max_bytes,
+        protocols_str = "https",
+        redir_protocols_str = "https",
+        useragent = paste0("readAOFM/", utils::packageVersion("readAOFM"))
+      )
+      response <- tryCatch(
+        curl::curl_fetch_disk(request_url, temporary, handle = handle),
+        error = function(e) {
+          last_error <<- conditionMessage(e)
+          NULL
+        }
+      )
+      if (is.null(response)) break
+      status <- if (
+        is.list(response) &&
+          is.numeric(response$status_code) &&
+          length(response$status_code) == 1L
+      ) {
+        as.integer(response$status_code)
+      } else {
+        NA_integer_
       }
-    )
-
-    retryable_server_error <- is.list(response) &&
-      !is.null(response$status_code) &&
-      response$status_code >= 500L
-    if (!is.null(response) && !retryable_server_error) {
+      if (!is.na(status) && status >= 300L && status < 400L) {
+        redirects <- redirects + 1L
+        if (redirects > 10L) {
+          stop("AOFM download exceeded ten redirects.", call. = FALSE)
+        }
+        request_url <- aofm_absolute_redirect_url(
+          aofm_response_header(response, "Location"),
+          request_url
+        )
+        if (isTRUE(official_only)) {
+          aofm_validate_official_url(request_url, "AOFM redirect target")
+        }
+        next
+      }
       break
+    }
+
+    status <- if (
+      is.list(response) &&
+        is.numeric(response$status_code) &&
+        length(response$status_code) == 1L
+    ) {
+      as.integer(response$status_code)
+    } else {
+      NA_integer_
+    }
+    retryable <- is.null(response) ||
+      (!is.na(status) && status %in% c(408L, 425L, 429L, 500L, 502L, 503L, 504L))
+    if (!retryable) {
+      break
+    }
+    if (attempt <= retries) {
+      aofm_sleep(aofm_retry_delay(response, attempt))
     }
   }
 
@@ -122,7 +391,30 @@ download_aofm_workbook <- function(
     )
   }
 
-  if (is.list(response) && !is.null(response$status_code) && response$status_code >= 400L) {
+  if (
+    isTRUE(official_only) &&
+      (
+        !is.list(response) ||
+          !is.numeric(response$status_code) ||
+          length(response$status_code) != 1L ||
+          is.na(response$status_code) ||
+          !is.finite(response$status_code) ||
+          !is.character(response$url) ||
+          length(response$url) != 1L ||
+          is.na(response$url) ||
+          !nzchar(response$url)
+      )
+  ) {
+    stop(
+      "Official AOFM transport did not attest a final URL and status.",
+      call. = FALSE
+    )
+  }
+  if (
+    is.list(response) &&
+      !is.null(response$status_code) &&
+      (response$status_code < 200L || response$status_code >= 300L)
+  ) {
     stop(
       sprintf(
         "Failed to download workbook from '%s' (HTTP %s).",
@@ -131,6 +423,9 @@ download_aofm_workbook <- function(
       ),
       call. = FALSE
     )
+  }
+  if (isTRUE(official_only)) {
+    aofm_validate_official_url(response$url, "AOFM redirect target")
   }
 
   content_type <- tolower(if (is.list(response) && !is.null(response$type)) response$type else "")
@@ -146,7 +441,12 @@ download_aofm_workbook <- function(
   }
 
   info <- file.info(temporary)
-  if (!file.exists(temporary) || is.na(info$size) || info$size <= 0) {
+  if (
+    !file.exists(temporary) ||
+      is.na(info$size) ||
+      info$size <= 0 ||
+      info$size > max_bytes
+  ) {
     stop(sprintf("Download from '%s' produced an empty file.", url), call. = FALSE)
   }
 
@@ -168,18 +468,59 @@ download_aofm_workbook <- function(
     }
   }
 
-  installed <- file.rename(temporary, destfile)
-  if (!installed) {
-    installed <- file.copy(temporary, destfile, overwrite = TRUE)
+  staged_sha256 <- digest::digest(
+    temporary,
+    algo = "sha256",
+    file = TRUE,
+    serialize = FALSE
+  )
+  backup <- NULL
+  if (file.exists(destfile)) {
+    backup <- tempfile(
+      pattern = paste0(".", basename(destfile), "-backup-"),
+      tmpdir = dirname(destfile)
+    )
+    if (!file.rename(destfile, backup)) {
+      stop(
+        sprintf("Could not stage the existing workbook at '%s'.", destfile),
+        call. = FALSE
+      )
+    }
+    on.exit(unlink(backup, force = TRUE), add = TRUE)
   }
-  if (!installed || !file.exists(destfile)) {
+  if (!file.rename(temporary, destfile)) {
+    if (!is.null(backup) && file.exists(backup)) {
+      file.rename(backup, destfile)
+    }
     stop(sprintf("Could not atomically install downloaded workbook at '%s'.", destfile), call. = FALSE)
+  }
+  installed_sha256 <- digest::digest(
+    destfile,
+    algo = "sha256",
+    file = TRUE,
+    serialize = FALSE
+  )
+  if (!identical(installed_sha256, staged_sha256)) {
+    unlink(destfile, force = TRUE)
+    if (!is.null(backup) && file.exists(backup)) {
+      if (!file.rename(backup, destfile)) {
+        stop(
+          "The new workbook failed verification and the prior workbook could not be restored.",
+          call. = FALSE
+        )
+      }
+    }
+    stop("The installed AOFM workbook failed final SHA-256 verification.", call. = FALSE)
   }
 
   invisible(destfile)
 }
 
-download_aofm_table_workbook <- function(aofm_table) {
+download_aofm_table_workbook <- function(
+    aofm_table,
+    timeout = getOption("readAOFM.timeout", 30),
+    retries = getOption("readAOFM.retries", 1L),
+    max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)) {
   row <- aofm_table_row(aofm_table)
   file_name <- row$file.save[[1]]
   ext <- tools::file_ext(file_name)
@@ -189,5 +530,12 @@ download_aofm_table_workbook <- function(aofm_table) {
   }
 
   tmp <- tempfile(fileext = paste0(".", ext))
-  download_aofm_workbook(row$file.path[[1]], tmp)
+  download_aofm_workbook(
+    row$file.path[[1]],
+    tmp,
+    timeout = timeout,
+    retries = retries,
+    max_bytes = max_bytes,
+    official_only = TRUE
+  )
 }

@@ -30,7 +30,7 @@ test_that("download_aofm_file targets one stable table and preserves metadata", 
   seen <- list()
 
   testthat::local_mocked_bindings(
-    download_aofm_workbook = function(url, destfile) {
+    download_aofm_workbook = function(url, destfile, ...) {
       seen[[length(seen) + 1L]] <<- list(url = url, destfile = destfile)
       dir.create(dirname(destfile), recursive = TRUE, showWarnings = FALSE)
       file.copy(source_fixture, destfile, overwrite = TRUE)
@@ -42,7 +42,7 @@ test_that("download_aofm_file targets one stable table and preserves metadata", 
   path <- download_aofm_file("tb_issuance", destination_dir)
 
   expect_true(file.exists(path))
-  expect_match(path, "tb_issuance\\.xlsx$")
+  expect_match(path, "[a-f0-9]{64}\\.xlsx$")
   expect_identical(attr(path, "table_id"), "tb_issuance")
   expect_match(attr(path, "source_url"), "aofm\\.gov\\.au")
   expect_equal(length(seen), 1L)
@@ -73,7 +73,11 @@ test_that("downloads are retried and installed without partial files", {
         stop("temporary failure")
       }
       file.copy(fixture, destfile, overwrite = TRUE)
-      list(status_code = 200L, type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      list(
+        status_code = 200L,
+        type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        url = url
+      )
     },
     .package = "curl"
   )
@@ -89,17 +93,19 @@ test_that("downloads are retried and installed without partial files", {
   expect_false(any(grepl("\\.part$", list.files(destination_dir))))
 })
 
-test_that("current AOFM production workbook shapes parse completely", {
-  live_files <- c(
-    eom = Sys.getenv("READAOFM_TEST_EOM_FILE"),
-    ownership = Sys.getenv("READAOFM_TEST_OWNERSHIP_FILE"),
-    premium = Sys.getenv("READAOFM_TEST_PREMIUM_FILE")
+test_that("production-shape contracts are covered by offline fixtures", {
+  eom <- read_aofm_file(
+    fixture_path("tb_position_dealt.xlsx"),
+    "tb_position_dealt"
   )
-  skip_if(any(!nzchar(live_files)), "Set READAOFM_TEST_*_FILE for production-shape tests")
-
-  eom <- read_aofm_file(live_files[["eom"]], "tb_position_dealt")
-  ownership <- read_aofm_file(live_files[["ownership"]], "ownership_public")
-  premium <- read_aofm_file(live_files[["premium"]], "termpremium")
+  ownership <- read_aofm_file(
+    fixture_path("ownership_public.xlsx"),
+    "ownership_public"
+  )
+  premium <- read_aofm_file(
+    fixture_path("termpremium.xlsx"),
+    "termpremium"
+  )
 
   expect_setequal(
     sub("^tb_position_dealt_", "", names(eom)),

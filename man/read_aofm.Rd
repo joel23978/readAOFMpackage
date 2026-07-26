@@ -4,7 +4,14 @@
 \alias{read_aofm}
 \title{Reads in and cleans any	data from the AOFM, returns cleaned in a long format}
 \usage{
-read_aofm(security = NULL, type = NULL, csv = FALSE)
+read_aofm(
+  security = NULL,
+  type = NULL,
+  csv = FALSE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 }
 \arguments{
 \item{security}{object you want data on, options include:
@@ -17,6 +24,12 @@ dealt, settlement, issuance, syndication, buyback, turnover,}
 
 \item{csv}{if \code{TRUE}, also writes the parsed output to a CSV file via the
 underlying reader}
+
+\item{timeout}{Per-attempt workbook transport timeout in seconds.}
+
+\item{retries}{Retries after the first workbook transport attempt.}
+
+\item{max_bytes}{Maximum accepted workbook size.}
 }
 \value{
 AOFM selected AOFM data as a dataframe, list, or named list of

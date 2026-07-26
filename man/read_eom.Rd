@@ -4,12 +4,24 @@
 \alias{read_eom}
 \title{Reads in and cleans the "End of Month Positions" data from the AOFM, returns a list}
 \usage{
-read_eom(aofm_table, csv = FALSE)
+read_eom(
+  aofm_table,
+  csv = FALSE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 }
 \arguments{
 \item{aofm_table}{object to download, typically called from read_aofm()}
 
 \item{csv}{if \code{TRUE}, also writes the parsed output to \verb{output/}}
+
+\item{timeout}{Per-attempt workbook transport timeout in seconds.}
+
+\item{retries}{Retries after the first workbook transport attempt.}
+
+\item{max_bytes}{Maximum accepted workbook size.}
 }
 \value{
 AOFM eom data is returned as a list with data frame elements for

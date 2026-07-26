@@ -4,7 +4,13 @@
 \alias{download_aofm_xlsx}
 \title{Download xlsx.xls files from AOFM DataHub}
 \usage{
-download_aofm_xlsx(security = NULL, type = NULL)
+download_aofm_xlsx(
+  security = NULL,
+  type = NULL,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 }
 \arguments{
 \item{security}{object you want data on, options include:
@@ -12,6 +18,12 @@ tb, tib, tn, slf, summary, aggregate, ownership, retail, termpremium}
 
 \item{type}{the specific type of data you want, occasionally optional:
 dealt, settlement, issuance, syndication, buyback, turnover,}
+
+\item{timeout}{Per-attempt workbook transport timeout in seconds.}
+
+\item{retries}{Retries after the first workbook transport attempt.}
+
+\item{max_bytes}{Maximum accepted workbook size.}
 }
 \value{
 a list of downloaded files

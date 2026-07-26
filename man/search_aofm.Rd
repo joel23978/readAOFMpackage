@@ -4,7 +4,14 @@
 \alias{search_aofm}
 \title{Search the supported AOFM table catalog}
 \usage{
-search_aofm(query, read = FALSE, csv = FALSE)
+search_aofm(
+  query,
+  read = FALSE,
+  csv = FALSE,
+  timeout = getOption("readAOFM.search_timeout", 3),
+  retries = getOption("readAOFM.search_retries", 0L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 }
 \arguments{
 \item{query}{Search string used to match supported AOFM tables}
@@ -14,6 +21,13 @@ returning the catalog rows}
 
 \item{csv}{if \code{TRUE} and \code{read = TRUE}, also writes matched outputs to CSV
 via \code{read_aofm()}}
+
+\item{timeout}{Per-attempt timeout used only when \code{read = TRUE}. Search
+reads default to a single three-second attempt.}
+
+\item{retries}{Retries after the first attempt when \code{read = TRUE}.}
+
+\item{max_bytes}{Maximum accepted workbook size when \code{read = TRUE}.}
 }
 \value{
 A dataframe of supported table matches, or the result of

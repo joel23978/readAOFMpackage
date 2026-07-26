@@ -7,7 +7,7 @@ test_that("download_aofm_xlsx targets the matched file", {
   seen <- list()
 
   testthat::local_mocked_bindings(
-    download_aofm_workbook = function(url, destfile) {
+    download_aofm_workbook = function(url, destfile, ...) {
       seen[[length(seen) + 1L]] <<- list(url = url, destfile = destfile)
       dir.create(dirname(destfile), recursive = TRUE, showWarnings = FALSE)
       file.copy(fixture, destfile, overwrite = TRUE)

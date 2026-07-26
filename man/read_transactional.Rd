@@ -4,12 +4,24 @@
 \alias{read_transactional}
 \title{Reads in and cleans data under "Transaction Details" from the AOFM, returns cleaned in a long format (excl. issunace via conversion and syndication details)}
 \usage{
-read_transactional(aofm_table, csv = FALSE)
+read_transactional(
+  aofm_table,
+  csv = FALSE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 }
 \arguments{
 \item{aofm_table}{object to download, typically called from read_aofm()}
 
 \item{csv}{if \code{TRUE}, also writes the parsed output to \verb{output/}}
+
+\item{timeout}{Per-attempt workbook transport timeout in seconds.}
+
+\item{retries}{Retries after the first workbook transport attempt.}
+
+\item{max_bytes}{Maximum accepted workbook size.}
 }
 \value{
 AOFM Transactional data as a dataframe

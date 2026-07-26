@@ -1,5 +1,9 @@
 ^readAOFM\.Rproj$
 ^\.Rproj\.user$
+^\.git$
+^\.github$
 ^LICENSE\.md$
 ^README\.Rmd$
 ^docs$
+^readAOFM\.Rcheck$
+^readAOFM_[0-9.]+\.tar\.gz$
