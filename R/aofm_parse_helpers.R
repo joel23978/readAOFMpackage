@@ -220,6 +220,9 @@ aofm_parse_eofy_workbook <- function(path, csv = FALSE) {
     tidyr::pivot_longer(!c(1:4), names_to = "date") %>%
     dplyr::mutate(date = aofm_excel_date(date, origin = "1899-12-30")) %>%
     dplyr::distinct() %>%
+    dplyr::mutate(
+      value = aofm_numeric_measure(value, "value", context)
+    ) %>%
     dplyr::mutate(value = tidyr::replace_na(value, 0)) %>%
     stats::na.omit()
 
@@ -317,7 +320,9 @@ aofm_parse_eom_workbook <- function(path, aofm_table, csv = FALSE) {
     tmp4 <- tmp4 %>%
       dplyr::mutate(date = aofm_excel_date(date, origin = "1899-12-30")) %>%
       dplyr::distinct() %>%
-      dplyr::mutate(value = as.numeric(value)) %>%
+      dplyr::mutate(
+        value = aofm_numeric_measure(value, "value", context)
+      ) %>%
       stats::na.omit()
 
     return.data[[length(return.data) + 1]] <- tmp4
@@ -435,6 +440,13 @@ aofm_parse_syndication_workbook <- function(path, aofm_table, csv = FALSE) {
 
     if (length(measure_cols) == 0) {
       stop(sprintf("%s: no syndication value columns found in sheet '%s'", context, sheet_name), call. = FALSE)
+    }
+    for (column in measure_cols) {
+      tmp2[[column]] <- aofm_numeric_measure(
+        tmp2[[column]],
+        column,
+        context
+      )
     }
 
     tmp2 %>%
@@ -591,19 +603,13 @@ aofm_parse_ownership_workbook <- function(path, aofm_table, csv = FALSE) {
 
     aofm_require_columns(tmp4, c("date", "value"), context)
 
-    if (grepl("public", aofm_table)) {
-      tmp5 <- tmp4 %>%
-        dplyr::mutate(date = aofm_excel_date(date, origin = "1899-12-30")) %>%
-        dplyr::distinct() %>%
-        dplyr::mutate(value = as.numeric(value)) %>%
-        stats::na.omit()
-    } else {
-      tmp5 <- tmp4 %>%
-        dplyr::mutate(date = aofm_excel_date(date, origin = "1899-12-30")) %>%
-        dplyr::distinct() %>%
-        dplyr::mutate(value = as.numeric(value)) %>%
-        stats::na.omit()
-    }
+    tmp5 <- tmp4 %>%
+      dplyr::mutate(date = aofm_excel_date(date, origin = "1899-12-30")) %>%
+      dplyr::distinct() %>%
+      dplyr::mutate(
+        value = aofm_numeric_measure(value, "value", context)
+      ) %>%
+      stats::na.omit()
 
     return.data[[length(return.data) + 1]] <- tmp5
     names(return.data)[length(return.data)] <- output.name

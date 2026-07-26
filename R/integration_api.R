@@ -518,8 +518,8 @@ download_aofm_file <- function(
   max_files <- as.integer(max_files)
   paths <- aofm_cache_paths(path, row$id[[1L]])
   aofm_validate_official_url(row$file.path[[1L]])
-  aofm_acquire_lock(paths$lock, lock_timeout)
-  on.exit(unlink(paths$lock, recursive = TRUE, force = TRUE), add = TRUE)
+  lock_owner <- aofm_acquire_lock(paths$lock, lock_timeout)
+  on.exit(aofm_release_lock(paths$lock, lock_owner), add = TRUE)
 
   metadata <- aofm_read_cache_metadata(paths$metadata)
   previous_metadata <- metadata
@@ -714,6 +714,42 @@ aofm_file_metadata <- function(file_path, table_id = NULL) {
       },
       error = function(error) FALSE
     )
+  resolved_file <- normalizePath(
+    file_path,
+    winslash = "/",
+    mustWork = TRUE
+  )
+  table_directory <- dirname(resolved_file)
+  metadata_path <- file.path(table_directory, "current.rds")
+  persisted <- if (
+    is.list(inherited) &&
+      identical(basename(table_directory), resolved_table) &&
+      identical(basename(dirname(table_directory)), "data") &&
+      identical(basename(dirname(dirname(table_directory))), ".readAOFM") &&
+      identical(basename(resolved_file), inherited$cache_file) &&
+      file.exists(metadata_path) &&
+      !nzchar(Sys.readlink(metadata_path))
+  ) {
+    tryCatch(readRDS(metadata_path), error = function(error) NULL)
+  } else {
+    NULL
+  }
+  persisted_fields <- c(
+    "schema_version", "table_id", "source_url", "source_filename",
+    "cache_file", "raw_sha256", "raw_bytes", "retrieved_at"
+  )
+  persisted_matches <- is.list(persisted) &&
+    !length(setdiff(persisted_fields, names(persisted))) &&
+    all(vapply(persisted_fields, function(name) {
+      identical(inherited[[name]], persisted[[name]])
+    }, logical(1))) &&
+    is.na(aofm_cache_entry_status(
+      persisted,
+      list(table_directory = table_directory),
+      resolved_row,
+      Inf,
+      Inf
+    ))
   inherited_valid <- is.list(inherited) &&
     !is.null(resolved_row) &&
     identical(inherited$schema_version, 1L) &&
@@ -729,6 +765,7 @@ aofm_file_metadata <- function(file_path, table_id = NULL) {
     identical(as.character(inherited$raw_sha256), raw_sha256) &&
     identical(as.numeric(inherited$raw_bytes), as.numeric(raw_bytes)) &&
     inherited_url_valid &&
+    persisted_matches &&
     length(inherited_time) == 1L &&
     !is.na(inherited_time) &&
     inherited_time <= Sys.time() + 60

@@ -420,14 +420,60 @@ test_that("official transport requires attested final URL and restores old bytes
   )
 })
 
+test_that("final digest errors restore the prior workbook", {
+  source <- fixture_path("tb_issuance.xlsx")
+  old_source <- fixture_path("tib_issuance.xlsx")
+  destination <- tempfile(fileext = ".xlsx")
+  file.copy(old_source, destination)
+  original_digest <- digest::digest
+  digest_calls <- 0L
+
+  testthat::local_mocked_bindings(
+    curl_fetch_disk = function(url, destfile, handle) {
+      file.copy(source, destfile, overwrite = TRUE)
+      list(
+        status_code = 200L,
+        type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        url = url
+      )
+    },
+    .package = "curl"
+  )
+  testthat::local_mocked_bindings(
+    digest = function(...) {
+      digest_calls <<- digest_calls + 1L
+      if (digest_calls == 2L) {
+        stop("simulated final digest error")
+      }
+      original_digest(...)
+    },
+    .package = "digest"
+  )
+
+  expect_error(
+    readAOFM:::download_aofm_workbook(
+      "https://www.aofm.gov.au/media/test",
+      destination,
+      official_only = TRUE
+    ),
+    "final SHA-256 verification.*simulated final digest error"
+  )
+  expect_identical(
+    readBin(destination, what = "raw", n = file.info(destination)$size),
+    readBin(old_source, what = "raw", n = file.info(old_source)$size)
+  )
+})
+
 test_that("forged local metadata is ignored and active old locks are not stolen", {
   fixture <- fixture_path("tb_issuance.xlsx")
   tagged <- fixture
+  row <- readAOFM:::aofm_table_row("tb_issuance")
   attr(tagged, "aofm_metadata") <- list(
     schema_version = 1L,
     table_id = "tb_issuance",
-    source_url = "https://www.aofm.gov.au/media/not-the-source.xlsx",
-    source_filename = basename(fixture),
+    source_url = as.character(row$file.path[[1L]]),
+    source_filename = as.character(row$file.save[[1L]]),
+    cache_file = basename(fixture),
     raw_sha256 = digest::digest(
       fixture,
       algo = "sha256",
@@ -452,6 +498,20 @@ test_that("forged local metadata is ignored and active old locks are not stolen"
     "Timed out"
   )
   expect_true(dir.exists(lock))
+})
+
+test_that("lock release preserves a replacement owner", {
+  lock <- file.path(tempfile("aofm-owner-lock-"), "writer.lock")
+  dir.create(dirname(lock))
+  first_owner <- readAOFM:::aofm_acquire_lock(lock, timeout = 0.1)
+
+  unlink(lock, recursive = TRUE, force = TRUE)
+  replacement_owner <- readAOFM:::aofm_acquire_lock(lock, timeout = 0.1)
+
+  expect_false(readAOFM:::aofm_release_lock(lock, first_owner))
+  expect_true(dir.exists(lock))
+  expect_true(readAOFM:::aofm_release_lock(lock, replacement_owner))
+  expect_false(dir.exists(lock))
 })
 
 test_that("offline fixtures cover every parser and special schema branch", {
@@ -568,6 +628,40 @@ test_that("date and measure conversion reject malformed upstream rows", {
     ),
     "amount.*row.*2"
   )
+})
+
+test_that("remaining parsers route measures through strict conversion", {
+  cases <- c(
+    summary = "summary.xlsx",
+    tb_position_dealt = "tb_position_dealt.xlsx",
+    tb_syndication = "tb_syndication.xlsx",
+    ownership_public = "ownership_public.xlsx"
+  )
+  original <- readAOFM:::aofm_numeric_measure
+
+  expect_rejection <- function(table_id, file) {
+    injected <- FALSE
+    testthat::local_mocked_bindings(
+      aofm_numeric_measure = function(x, column, context) {
+        if (!injected) {
+          raw <- as.character(x)
+          row <- which(!is.na(raw) & nzchar(trimws(raw)))[[1L]]
+          raw[[row]] <- "schema-drift"
+          x <- raw
+          injected <<- TRUE
+        }
+        original(x, column, context)
+      },
+      .package = "readAOFM"
+    )
+    expect_error(
+      read_aofm_file(fixture_path(file), table_id),
+      "non-numeric value"
+    )
+    expect_true(injected)
+  }
+
+  Map(expect_rejection, names(cases), unname(cases))
 })
 
 test_that("cache bounds and URL overrides fail closed before I/O", {

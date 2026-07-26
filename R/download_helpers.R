@@ -138,6 +138,7 @@ aofm_acquire_lock <- function(path, timeout = 10) {
     if (dir.create(path, recursive = FALSE, showWarnings = FALSE)) {
       owner_path <- file.path(path, "owner.rds")
       owner <- list(
+        token = basename(tempfile(pattern = "aofm-lock-owner-")),
         pid = Sys.getpid(),
         host = unname(Sys.info()[["nodename"]]),
         created_at = as.POSIXct(Sys.time(), tz = "UTC")
@@ -153,7 +154,7 @@ aofm_acquire_lock <- function(path, timeout = 10) {
         unlink(path, recursive = TRUE, force = TRUE)
         stop("Could not record the AOFM cache lock owner.", call. = FALSE)
       }
-      return(invisible(path))
+      return(invisible(owner))
     }
     info <- file.info(path)
     age <- as.numeric(difftime(Sys.time(), info$mtime, units = "secs"))
@@ -187,6 +188,31 @@ aofm_acquire_lock <- function(path, timeout = 10) {
     }
     Sys.sleep(0.05)
   }
+}
+
+aofm_release_lock <- function(path, owner) {
+  if (
+    !dir.exists(path) ||
+      !is.list(owner) ||
+      !is.character(owner$token) ||
+      length(owner$token) != 1L ||
+      is.na(owner$token) ||
+      !nzchar(owner$token)
+  ) {
+    return(invisible(FALSE))
+  }
+  current <- tryCatch(
+    readRDS(file.path(path, "owner.rds")),
+    error = function(error) NULL
+  )
+  if (
+    !is.list(current) ||
+      !identical(current$token, owner$token)
+  ) {
+    return(invisible(FALSE))
+  }
+  unlink(path, recursive = TRUE, force = TRUE)
+  invisible(!dir.exists(path))
 }
 
 aofm_retry_after <- function(response, now = Sys.time(), maximum = 5) {
@@ -300,8 +326,8 @@ download_aofm_workbook <- function(
   if (isTRUE(official_only)) aofm_validate_official_url(url)
 
   lock <- paste0(destfile, ".lock")
-  aofm_acquire_lock(lock, lock_timeout)
-  on.exit(unlink(lock, recursive = TRUE, force = TRUE), add = TRUE)
+  lock_owner <- aofm_acquire_lock(lock, lock_timeout)
+  on.exit(aofm_release_lock(lock, lock_owner), add = TRUE)
 
   temporary <- tempfile(
     pattern = paste0(".", basename(destfile), "-"),
@@ -494,22 +520,41 @@ download_aofm_workbook <- function(
     }
     stop(sprintf("Could not atomically install downloaded workbook at '%s'.", destfile), call. = FALSE)
   }
-  installed_sha256 <- digest::digest(
-    destfile,
-    algo = "sha256",
-    file = TRUE,
-    serialize = FALSE
+  restore_previous <- function() {
+    unlink(destfile, force = TRUE)
+    if (
+      !is.null(backup) &&
+        file.exists(backup) &&
+        !file.rename(backup, destfile)
+    ) {
+      stop(
+        "The new workbook failed verification and the prior workbook could not be restored.",
+        call. = FALSE
+      )
+    }
+    invisible(NULL)
+  }
+  installed_sha256 <- tryCatch(
+    digest::digest(
+      destfile,
+      algo = "sha256",
+      file = TRUE,
+      serialize = FALSE
+    ),
+    error = function(error) {
+      restore_previous()
+      stop(
+        paste0(
+          "Could not complete final SHA-256 verification of the installed ",
+          "AOFM workbook: ",
+          conditionMessage(error)
+        ),
+        call. = FALSE
+      )
+    }
   )
   if (!identical(installed_sha256, staged_sha256)) {
-    unlink(destfile, force = TRUE)
-    if (!is.null(backup) && file.exists(backup)) {
-      if (!file.rename(backup, destfile)) {
-        stop(
-          "The new workbook failed verification and the prior workbook could not be restored.",
-          call. = FALSE
-        )
-      }
-    }
+    restore_previous()
     stop("The installed AOFM workbook failed final SHA-256 verification.", call. = FALSE)
   }
 
