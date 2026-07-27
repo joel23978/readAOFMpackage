@@ -680,4 +680,42 @@ download_aofm_table_workbook <- function(
     max_bytes = max_bytes,
     official_only = TRUE
   )
+  attr(tmp, "aofm_source") <- aofm_workbook_source(
+    tmp,
+    table_id = row$id[[1]],
+    source_url = row$file.path[[1]],
+    role = "current"
+  )
+  tmp
+}
+
+aofm_workbook_source <- function(path, table_id, source_url, role) {
+  if (!file.exists(path)) {
+    stop("Cannot record provenance for a missing AOFM workbook.", call. = FALSE)
+  }
+  aofm_validate_official_url(source_url)
+  if (
+    !is.character(role) ||
+      length(role) != 1L ||
+      is.na(role) ||
+      !role %in% c("historical", "current")
+  ) {
+    stop("AOFM workbook source role must be historical or current.", call. = FALSE)
+  }
+  retrieved_at <- as.POSIXct(file.info(path)$mtime, tz = "UTC")
+  list(
+    schema_version = 1L,
+    table_id = as.character(table_id),
+    role = role,
+    source_url = as.character(source_url),
+    source_filename = basename(utils::URLdecode(source_url)),
+    raw_sha256 = digest::digest(
+      path,
+      algo = "sha256",
+      file = TRUE,
+      serialize = FALSE
+    ),
+    raw_bytes = unname(file.info(path)$size),
+    retrieved_at = retrieved_at
+  )
 }

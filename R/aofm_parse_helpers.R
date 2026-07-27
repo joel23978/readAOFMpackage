@@ -226,6 +226,52 @@ aofm_write_csv_if_requested <- function(data, csv, path) {
   invisible(data)
 }
 
+aofm_stitch_observations <- function(
+    historical,
+    current,
+    identity,
+    order_by = identity) {
+  if (
+    !is.data.frame(historical) ||
+      !is.data.frame(current) ||
+      !identical(names(historical), names(current))
+  ) {
+    stop(
+      "Historical and current AOFM observations must have the same schema.",
+      call. = FALSE
+    )
+  }
+  if (
+    !is.character(identity) ||
+      !length(identity) ||
+      length(setdiff(identity, names(current)))
+  ) {
+    stop("AOFM stitch identity columns are invalid.", call. = FALSE)
+  }
+  for (source in list(historical = historical, current = current)) {
+    if (anyDuplicated(source[identity])) {
+      stop(
+        "An AOFM source contains duplicate natural observation identities.",
+        call. = FALSE
+      )
+    }
+  }
+
+  historical_only <- dplyr::anti_join(
+    historical,
+    current[identity],
+    by = identity
+  )
+  result <- dplyr::bind_rows(historical_only, current)
+  if (anyDuplicated(result[identity])) {
+    stop(
+      "AOFM source stitching produced duplicate observation identities.",
+      call. = FALSE
+    )
+  }
+  dplyr::arrange(result, dplyr::across(dplyr::all_of(order_by)))
+}
+
 aofm_transactional_required_columns <- function(aofm_table) {
   if (grepl("retail", aofm_table)) {
     return(c("settle_date", "security_maturity_date"))

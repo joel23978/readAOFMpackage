@@ -743,7 +743,58 @@ test_that("turnover readers join historical and current AOFM workbooks", {
   )
   expect_identical(min(parsed$period), as.Date("2025-12-31"))
   expect_identical(max(parsed$period), as.Date("2026-03-31"))
-  expect_identical(anyDuplicated(parsed), 0L)
+  expect_identical(
+    anyDuplicated(parsed[c("period", "group", "name")]),
+    0L
+  )
+
+  sources <- attr(parsed, "aofm_sources")
+  expect_named(sources, c("historical", "current"))
+  expect_identical(sources$historical$role, "historical")
+  expect_identical(sources$current$role, "current")
+  expect_match(sources$historical$source_url, "turnover_-_treasury_bonds")
+  expect_match(sources$current$source_url, "new_turnover_-_treasury_bonds")
+  expect_match(sources$historical$raw_sha256, "^[a-f0-9]{64}$")
+  expect_match(sources$current$raw_sha256, "^[a-f0-9]{64}$")
+})
+
+test_that("source stitching prefers current revisions by natural identity", {
+  historical <- data.frame(
+    period = as.Date(c("2025-12-31", "2026-01-31")),
+    group = c("region", "region"),
+    name = c("Australia", "Australia"),
+    value = c(100, 110)
+  )
+  current <- data.frame(
+    period = as.Date(c("2026-01-31", "2026-02-28")),
+    group = c("region", "region"),
+    name = c("Australia", "Australia"),
+    value = c(111, 120)
+  )
+
+  stitched <- readAOFM:::aofm_stitch_observations(
+    historical,
+    current,
+    identity = c("period", "group", "name"),
+    order_by = c("period", "group", "name")
+  )
+
+  expect_identical(
+    stitched$value,
+    c(100, 111, 120)
+  )
+  expect_identical(
+    anyDuplicated(stitched[c("period", "group", "name")]),
+    0L
+  )
+  expect_error(
+    readAOFM:::aofm_stitch_observations(
+      rbind(historical, historical[1, ]),
+      current,
+      identity = c("period", "group", "name")
+    ),
+    "duplicate natural observation identities"
+  )
 })
 
 test_that("remaining parsers route measures through strict conversion", {

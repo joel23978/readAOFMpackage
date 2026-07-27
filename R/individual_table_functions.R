@@ -198,6 +198,16 @@ read_secondary <- function(aofm_table
                            , max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
 ) {
   tmp0 <- download_aofm_table_workbook(aofm_table, timeout, retries, max_bytes)
+  current_source <- attr(tmp0, "aofm_source")
+  if (is.null(current_source)) {
+    row <- aofm_table_row(aofm_table)
+    current_source <- aofm_workbook_source(
+      tmp0,
+      table_id = aofm_table,
+      source_url = row$file.path[[1]],
+      role = "current"
+    )
+  }
   current <- aofm_parse_secondary_workbook(
     tmp0,
     aofm_table = aofm_table,
@@ -217,14 +227,27 @@ read_secondary <- function(aofm_table
       max_bytes = max_bytes,
       official_only = TRUE
     )
+    history_source <- aofm_workbook_source(
+      history_path,
+      table_id = aofm_table,
+      source_url = history_url,
+      role = "historical"
+    )
     history <- aofm_parse_secondary_workbook(
       history_path,
       aofm_table = aofm_table,
       csv = FALSE
     )
-    result <- dplyr::bind_rows(history, current) %>%
-      dplyr::distinct() %>%
-      dplyr::arrange(period, group, name)
+    result <- aofm_stitch_observations(
+      historical = history,
+      current = current,
+      identity = c("period", "group", "name"),
+      order_by = c("period", "group", "name")
+    )
+    attr(result, "aofm_sources") <- list(
+      historical = history_source,
+      current = current_source
+    )
   }
   aofm_write_csv_if_requested(
     result,
