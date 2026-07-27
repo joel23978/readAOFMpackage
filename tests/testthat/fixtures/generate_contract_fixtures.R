@@ -29,7 +29,13 @@ summary_sheet <- rbind(
   c("Debt", "AGS", "Treasury Bonds", "Face value", "900", "950"),
   c("Debt", "AGS", "Treasury Indexed Bonds", "Face value", "40", "45")
 )
-write_raw_workbook("summary.xlsx", list(Summary = summary_sheet))
+write_raw_workbook(
+  "summary.xlsx",
+  list(
+    Notes = matrix("Synthetic summary notes", ncol = 1L),
+    Portfolio = summary_sheet
+  )
+)
 
 hierarchy_sheet <- function(title, first_date = "2025-12-31") {
   rbind(
@@ -91,6 +97,65 @@ write_raw_workbook(
     Notes = matrix("Synthetic turnover notes", ncol = 1L),
     Tenor = secondary_sheet("TIB turnover by tenor", tib = TRUE),
     Investor = secondary_sheet("TIB turnover by investor", tib = TRUE)
+  )
+)
+
+current_security_sheet <- function(title, security_prefix) {
+  rbind(
+    c(title, "", ""),
+    c("Month", "AU0000SYN001", "AU0000SYN002"),
+    c("", paste(security_prefix, "2030"), paste(security_prefix, "2035")),
+    c("Jan-26", "100", "200"),
+    c("Feb-26", "110", "210"),
+    c("Mar-26", "120", "220")
+  )
+}
+
+current_region_sheet <- function(title) {
+  rbind(
+    c(title, "", "", ""),
+    c("", "", "", ""),
+    c("", "Month", "Australia", "Asia"),
+    c("", "Jan-26", "250", "50"),
+    c("", "Feb-26", "260", "60"),
+    c("", "Mar-26", "270", "70")
+  )
+}
+
+current_counterparty_sheet <- function(title) {
+  rbind(
+    c(title, "", ""),
+    c("", "", ""),
+    c("Month", "Bank Customer", "Fund Manager"),
+    c("Jan-26", "150", "150"),
+    c("Feb-26", "160", "160"),
+    c("Mar-26", "170", "170")
+  )
+}
+
+write_raw_workbook(
+  "tb_turnover_current.xlsx",
+  list(
+    Notes = matrix("Synthetic current turnover notes", ncol = 1L),
+    Security = current_security_sheet("Current TB turnover by security", "TB"),
+    Region = current_region_sheet("Current TB turnover by region"),
+    Counterparty = current_counterparty_sheet(
+      "Current TB turnover by counterparty"
+    )
+  )
+)
+write_raw_workbook(
+  "tib_turnover_current.xlsx",
+  list(
+    Notes = matrix("Synthetic current turnover notes", ncol = 1L),
+    Security = current_security_sheet(
+      "Current TIB turnover by security",
+      "TIB"
+    ),
+    Region = current_region_sheet("Current TIB turnover by region"),
+    Counterparty = current_counterparty_sheet(
+      "Current TIB turnover by counterparty"
+    )
   )
 )
 
@@ -207,6 +272,7 @@ write_raw_workbook(
 write_raw_workbook(
   "slf.xlsx",
   list(
+    Notes = matrix("Synthetic SLF notes", ncol = 1L),
     Transactions = transactional_sheet(
       "Synthetic securities lending transactions",
       c("Start Date", "End Date", "Security Maturity Date", "Security", "Amount"),
@@ -220,8 +286,7 @@ write_raw_workbook(
           excel_serial("2035-06-21"), "TB 2035", "30"
         )
       )
-    ),
-    Notes = matrix("Synthetic SLF notes", ncol = 1L)
+    )
   )
 )
 

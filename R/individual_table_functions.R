@@ -198,7 +198,40 @@ read_secondary <- function(aofm_table
                            , max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
 ) {
   tmp0 <- download_aofm_table_workbook(aofm_table, timeout, retries, max_bytes)
-  aofm_parse_secondary_workbook(tmp0, aofm_table = aofm_table, csv = csv)
+  current <- aofm_parse_secondary_workbook(
+    tmp0,
+    aofm_table = aofm_table,
+    csv = FALSE
+  )
+  history_urls <- aofm_turnover_history_urls()
+  history_url <- unname(history_urls[aofm_table])
+  if (!length(history_url) || is.na(history_url)) {
+    result <- current
+  } else {
+    history_path <- tempfile(fileext = ".xlsx")
+    download_aofm_workbook(
+      history_url,
+      history_path,
+      timeout = timeout,
+      retries = retries,
+      max_bytes = max_bytes,
+      official_only = TRUE
+    )
+    history <- aofm_parse_secondary_workbook(
+      history_path,
+      aofm_table = aofm_table,
+      csv = FALSE
+    )
+    result <- dplyr::bind_rows(history, current) %>%
+      dplyr::distinct() %>%
+      dplyr::arrange(period, group, name)
+  }
+  aofm_write_csv_if_requested(
+    result,
+    csv,
+    file.path("output", paste0(aofm_table, ".csv"))
+  )
+  result
 }
 
 

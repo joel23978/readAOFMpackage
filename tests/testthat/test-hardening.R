@@ -696,6 +696,10 @@ test_that("public selectors reject non-scalar and missing controls", {
 })
 
 test_that("date and measure conversion reject malformed upstream rows", {
+  expect_identical(
+    readAOFM:::aofm_excel_date(c(950745600, 1774915200)),
+    as.Date(c("2000-02-17", "2026-03-31"))
+  )
   expect_error(
     readAOFM:::aofm_excel_date(c("2026-06-01", "schema-drift")),
     "date value.*row.*2"
@@ -708,6 +712,38 @@ test_that("date and measure conversion reject malformed upstream rows", {
     ),
     "amount.*row.*2"
   )
+})
+
+test_that("Notes-first current layouts select data sheets by name", {
+  summary <- read_aofm_file(fixture_path("summary.xlsx"), "summary")
+  slf <- read_aofm_file(fixture_path("slf.xlsx"), "slf")
+
+  expect_identical(max(summary$date), as.Date("2026-06-30"))
+  expect_identical(max(slf$start_date), as.Date("2026-07-01"))
+})
+
+test_that("turnover readers join historical and current AOFM workbooks", {
+  current <- fixture_path("tb_turnover_current.xlsx")
+  history <- fixture_path("tb_turnover.xlsx")
+
+  testthat::local_mocked_bindings(
+    download_aofm_table_workbook = function(...) current,
+    download_aofm_workbook = function(url, destfile, ...) {
+      file.copy(history, destfile, overwrite = TRUE)
+      invisible(destfile)
+    },
+    .package = "readAOFM"
+  )
+
+  parsed <- read_secondary("tb_turnover")
+
+  expect_identical(
+    sort(unique(parsed$group)),
+    c("counterparty", "investor_type", "region", "security", "tenor")
+  )
+  expect_identical(min(parsed$period), as.Date("2025-12-31"))
+  expect_identical(max(parsed$period), as.Date("2026-03-31"))
+  expect_identical(anyDuplicated(parsed), 0L)
 })
 
 test_that("remaining parsers route measures through strict conversion", {

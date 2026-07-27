@@ -1,9 +1,93 @@
 aofm_catalog_overrides <- function() {
   configured <- getOption("readAOFM.url_overrides", NULL)
   defaults <- c(
+    summary = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-06-06/",
+      "portfolio_aggregate_-_executive_summary_-_dealt.xlsx"
+    ),
+    aggregate_position_dealt = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-05-02/",
+      "portfolio_aggregate_-_dealt_4.xlsx"
+    ),
+    aggregate_position_settlement = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-05-02/",
+      "portfolio_aggregate_-_settlement.xlsx"
+    ),
+    tb_position_dealt = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-05-02/",
+      "portfolio_aggregate_-_treasury_bonds_-_dealt.xlsx"
+    ),
+    tb_position_settlement = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-05-02/",
+      "portfolio_aggregate_-_treasury_bonds_-_settlement.xlsx"
+    ),
+    tib_position_dealt = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-05-02/",
+      "portfolio_aggregate_-_treasury_indexed_bonds_-_dealt.xlsx"
+    ),
+    tib_position_settlement = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-05-02/",
+      "portfolio_aggregate_-_treasury_indexed_bonds_-_settlement.xlsx"
+    ),
+    tn_position_dealt = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-05-02/",
+      "portfolio_aggregate_-_treasury_notes_-_dealt_1.xlsx"
+    ),
+    tn_position_settlement = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-05-02/",
+      "portfolio_aggregate_-_treasury_notes_-_settlement.xlsx"
+    ),
+    tb_issuance = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-06-20/",
+      "treasury%20bonds%20-%20issuance.xlsx"
+    ),
+    tb_syndication = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-06-06/",
+      "TB%20Syndications.xlsx"
+    ),
+    tb_buyback = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-06-06/",
+      "treasury%20bonds%20-%20buybacks.xlsx"
+    ),
+    tib_issuance = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-07-10/",
+      "Treasury%20Indexed%20Bonds%20-%20Issuance_0.xlsx"
+    ),
+    tib_syndication = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-06-06/",
+      "TIB%20syndications.xlsx"
+    ),
+    tib_buyback = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-06-06/",
+      "treasury%20indexed%20bonds%20-%20buybacks.xlsx"
+    ),
+    tn_issuance = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-06-05/",
+      "Treasury%20Notes%20-%20Issuance.xlsx"
+    ),
+    retail = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-06-06/",
+      "retail%20register%20buybacks.xlsx"
+    ),
+    slf = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-06-06/",
+      "securities%20lending%20facility.xlsx"
+    ),
     ownership_public = paste0(
       "https://www.aofm.gov.au/sites/default/files/2025-05-02/",
       "register_of_government_borrowing.xlsx"
+    ),
+    ownership_nonresident = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-05-02/",
+      "foreign_holdings.xlsx"
+    ),
+    tb_turnover = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2026-05-29/",
+      "new_turnover_-_treasury_bonds.xlsx"
+    ),
+    tib_turnover = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2026-05-29/",
+      "new_turnover_-_treasury_indexed_bonds.xlsx"
     ),
     termpremium = paste0(
       "https://www.aofm.gov.au/sites/default/files/2025-06-06/",
@@ -42,6 +126,19 @@ aofm_catalog_overrides <- function() {
 
   defaults[configured_names] <- configured
   defaults
+}
+
+aofm_turnover_history_urls <- function() {
+  c(
+    tb_turnover = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-05-02/",
+      "turnover_-_treasury_bonds.xlsx"
+    ),
+    tib_turnover = paste0(
+      "https://www.aofm.gov.au/sites/default/files/2025-05-02/",
+      "turnover_-_treasury_indexed_bonds.xlsx"
+    )
+  )
 }
 
 aofm_apply_catalog_overrides <- function(catalog) {

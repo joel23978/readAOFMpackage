@@ -51,13 +51,22 @@ test_that("download_aofm_file targets one stable table and preserves metadata", 
   expect_equal(length(seen), 1L)
 })
 
-test_that("current production URL overrides are exposed consistently", {
+test_that("all supported routes use current Data Hub workbook URLs", {
   catalog <- aofm_catalog()
   term <- catalog[catalog$table_id == "termpremium", , drop = FALSE]
   public <- catalog[catalog$table_id == "ownership_public", , drop = FALSE]
+  tb <- catalog[catalog$table_id == "tb_issuance", , drop = FALSE]
+  turnover <- catalog[catalog$table_id == "tb_turnover", , drop = FALSE]
 
+  expect_false(any(grepl("/media/", catalog$source_url, fixed = TRUE)))
+  expect_true(all(grepl(
+    "^https://www\\.aofm\\.gov\\.au/sites/default/files/",
+    catalog$source_url
+  )))
   expect_match(term$source_url, "2025-06-06/term%20premium\\.xlsx$")
   expect_match(public$source_url, "2025-05-02/register_of_government_borrowing\\.xlsx$")
+  expect_match(tb$source_url, "treasury%20bonds%20-%20issuance\\.xlsx$")
+  expect_match(turnover$source_url, "2026-05-29/new_turnover")
 })
 
 test_that("downloads are retried and installed without partial files", {
@@ -117,6 +126,30 @@ test_that("production-shape contracts are covered by offline fixtures", {
   expect_true(all(vapply(ownership, nrow, integer(1)) > 0L))
   expect_setequal(unique(premium$type), c("TermPremiumOLS", "TermPremiumBC"))
   expect_true(all(!is.na(premium$date)))
+})
+
+test_that("current turnover workbooks retain the stable long shape", {
+  cases <- c(
+    tb_turnover = "tb_turnover_current.xlsx",
+    tib_turnover = "tib_turnover_current.xlsx"
+  )
+
+  for (table_id in names(cases)) {
+    parsed <- read_aofm_file(
+      fixture_path(cases[[table_id]]),
+      table_id
+    )
+    expect_named(parsed, c("period", "group", "name", "value"))
+    expect_identical(
+      sort(unique(parsed$group)),
+      c("counterparty", "region", "security")
+    )
+    expect_identical(
+      range(parsed$period),
+      as.Date(c("2026-01-31", "2026-03-31"))
+    )
+    expect_type(parsed$value, "double")
+  }
 })
 
 test_that("read_aofm_file parses representative local fixtures", {

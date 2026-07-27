@@ -39,7 +39,12 @@ aofm_excel_date <- function(x, origin = "1899-12-30") {
   }
 
   if (is.numeric(x)) {
-    return(as.Date(x, origin = origin))
+    epoch_seconds <- !is.na(x) & abs(x) >= 1e7
+    result <- as.Date(x, origin = origin)
+    result[epoch_seconds] <- as.Date(
+      as.POSIXct(x[epoch_seconds], origin = "1970-01-01", tz = "UTC")
+    )
+    return(result)
   }
 
   if (is.character(x)) {
@@ -48,7 +53,10 @@ aofm_excel_date <- function(x, origin = "1899-12-30") {
     numeric_x <- suppressWarnings(as.numeric(raw))
     parsed_x <- rep(as.Date(NA), length(x))
     numeric_rows <- !missing & !is.na(numeric_x)
-    parsed_x[numeric_rows] <- as.Date(numeric_x[numeric_rows], origin = origin)
+    parsed_x[numeric_rows] <- aofm_excel_date(
+      numeric_x[numeric_rows],
+      origin = origin
+    )
     date_rows <- !missing & is.na(numeric_x)
     parsed_x[date_rows] <- vapply(
       raw[date_rows],
@@ -74,6 +82,38 @@ aofm_excel_date <- function(x, origin = "1899-12-30") {
   }
 
   as.Date(x)
+}
+
+aofm_data_sheet <- function(path, context, pattern = NULL) {
+  sheets <- readxl::excel_sheets(path)
+  candidates <- sheets[!grepl("^notes\\b", sheets, ignore.case = TRUE)]
+  if (!is.null(pattern)) {
+    preferred <- candidates[
+      grepl(pattern, candidates, ignore.case = TRUE, perl = TRUE)
+    ]
+    if (length(preferred) == 1L) return(preferred)
+    if (length(preferred) > 1L) {
+      stop(
+        sprintf(
+          "%s: multiple workbook sheets matched '%s': %s",
+          context,
+          pattern,
+          paste(preferred, collapse = ", ")
+        ),
+        call. = FALSE
+      )
+    }
+  }
+  if (length(candidates) != 1L) {
+    stop(
+      sprintf(
+        "%s: could not resolve one data sheet after excluding notes",
+        context
+      ),
+      call. = FALSE
+    )
+  }
+  candidates
 }
 
 aofm_numeric_measure <- function(x, column, context) {
@@ -205,8 +245,9 @@ aofm_transactional_required_columns <- function(aofm_table) {
 aofm_parse_eofy_workbook <- function(path, csv = FALSE) {
   context <- "read_eofy()"
   aofm_validate_workbook(path, 1, context)
+  data_sheet <- aofm_data_sheet(path, context, "^portfolio$")
 
-  tmp1 <- readxl::read_excel(path, skip = 1, sheet = 1)
+  tmp1 <- readxl::read_excel(path, skip = 1, sheet = data_sheet)
   aofm_require_rows(tmp1, 1, context)
   if (ncol(tmp1) < 4) {
     stop(sprintf("%s: expected at least 4 columns in the first sheet", context), call. = FALSE)
@@ -344,12 +385,14 @@ aofm_parse_eom_workbook <- function(path, aofm_table, csv = FALSE) {
 aofm_parse_transactional_workbook <- function(path, aofm_table, csv = FALSE) {
   context <- sprintf("read_transactional(%s)", aofm_table)
   aofm_validate_workbook(path, 1, context)
+  data_sheet <- aofm_data_sheet(path, context, "^transactions?$")
+  header <- readxl::read_excel(path, sheet = data_sheet)[1, , drop = FALSE]
 
   tmp1 <- readxl::read_excel(
     path,
     skip = 3,
-    sheet = 1,
-    col_names = as.character(readxl::read_excel(path)[1, ]),
+    sheet = data_sheet,
+    col_names = as.character(header),
     guess_max = 10000
   ) %>%
     janitor::clean_names()
@@ -467,40 +510,193 @@ aofm_parse_syndication_workbook <- function(path, aofm_table, csv = FALSE) {
   tmp5
 }
 
+aofm_secondary_period <- function(x, context) {
+  if (!is.character(x)) return(aofm_excel_date(x))
+  raw <- trimws(x)
+  missing <- is.na(x) | !nzchar(raw)
+  numeric_x <- suppressWarnings(as.numeric(raw))
+  result <- rep(as.Date(NA), length(raw))
+  numeric_rows <- !missing & !is.na(numeric_x)
+  result[numeric_rows] <- aofm_excel_date(numeric_x[numeric_rows])
+
+  text_rows <- which(!missing & is.na(numeric_x))
+  for (row in text_rows) {
+    parsed <- suppressWarnings(
+      as.Date(raw[[row]], format = "%Y-%m-%d")
+    )
+    month_period <- FALSE
+    if (is.na(parsed)) {
+      month_formats <- c(
+        "%d-%b-%y",
+        "%d-%B-%Y",
+        "%d %b %Y",
+        "%d %B %Y"
+      )
+      month_values <- c(
+        paste0("01-", raw[[row]]),
+        paste0("01-", raw[[row]]),
+        paste0("01 ", raw[[row]]),
+        paste0("01 ", raw[[row]])
+      )
+      for (index in seq_along(month_formats)) {
+        parsed <- suppressWarnings(
+          as.Date(month_values[[index]], format = month_formats[[index]])
+        )
+        if (!is.na(parsed)) {
+          month_period <- TRUE
+          break
+        }
+      }
+    }
+    if (!is.na(parsed) && month_period) {
+      parsed <- seq(parsed, by = "1 month", length.out = 2L)[[2L]] - 1
+    }
+    result[[row]] <- parsed
+  }
+
+  invalid <- which(!missing & is.na(result))
+  if (length(invalid)) {
+    stop(
+      sprintf(
+        "%s: invalid turnover period at row(s) %s",
+        context,
+        paste(invalid, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+  result
+}
+
+aofm_secondary_group <- function(sheet_name) {
+  normalized <- tolower(sheet_name)
+  if (grepl("tenor", normalized)) return("tenor")
+  if (grepl("category|investor", normalized)) return("investor_type")
+  if (grepl("security", normalized)) return("security")
+  if (grepl("region", normalized)) return("region")
+  if (grepl("counterparty", normalized)) return("counterparty")
+  gsub("[^a-z0-9]+", "_", normalized)
+}
+
+aofm_parse_secondary_sheet <- function(path, sheet_name, context) {
+  raw <- readxl::read_excel(
+    path,
+    sheet = sheet_name,
+    col_names = FALSE,
+    .name_repair = "minimal"
+  )
+  raw <- as.data.frame(
+    lapply(raw, function(column) trimws(as.character(column))),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  values <- as.matrix(raw)
+  normalized_values <- matrix(
+    tolower(values),
+    nrow = nrow(values),
+    ncol = ncol(values)
+  )
+  period_cells <- which(
+    normalized_values == "month" |
+      normalized_values == "period" |
+      normalized_values == "quarter",
+    arr.ind = TRUE
+  )
+  if (!nrow(period_cells)) {
+    stop(
+      sprintf("%s: no Month, Quarter, or Period header in '%s'", context, sheet_name),
+      call. = FALSE
+    )
+  }
+  header_row <- period_cells[[1L, "row"]]
+  period_column <- period_cells[[1L, "col"]]
+  group <- aofm_secondary_group(sheet_name)
+  header <- values[header_row, , drop = TRUE]
+  data_start <- header_row + 1L
+
+  if (
+    identical(group, "security") &&
+      data_start <= nrow(values) &&
+      (is.na(values[data_start, period_column]) ||
+        !nzchar(values[data_start, period_column]))
+  ) {
+    detail <- values[data_start, , drop = TRUE]
+    measure_columns <- seq.int(period_column + 1L, ncol(values))
+    for (column in measure_columns) {
+      pieces <- c(header[[column]], detail[[column]])
+      pieces <- pieces[!is.na(pieces) & nzchar(pieces)]
+      header[[column]] <- paste(unique(pieces), collapse = " | ")
+    }
+    data_start <- data_start + 1L
+  }
+
+  candidate_columns <- seq.int(period_column + 1L, ncol(values))
+  measure_columns <- candidate_columns[
+    !is.na(header[candidate_columns]) & nzchar(header[candidate_columns])
+  ]
+  if (!length(measure_columns)) {
+    stop(
+      sprintf("%s: no turnover measures found in '%s'", context, sheet_name),
+      call. = FALSE
+    )
+  }
+  data_rows <- seq.int(data_start, nrow(values))
+  data_rows <- data_rows[
+    !is.na(values[data_rows, period_column]) &
+      nzchar(values[data_rows, period_column])
+  ]
+  if (!length(data_rows)) {
+    stop(
+      sprintf("%s: no turnover observations found in '%s'", context, sheet_name),
+      call. = FALSE
+    )
+  }
+
+  measures <- as.data.frame(
+    values[data_rows, measure_columns, drop = FALSE],
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  names(measures) <- make.unique(header[measure_columns], sep = "_")
+  for (column in names(measures)) {
+    measures[[column]] <- aofm_numeric_measure(
+      measures[[column]],
+      column,
+      context
+    )
+  }
+  measures$period <- aofm_secondary_period(
+    values[data_rows, period_column],
+    context
+  )
+  measures$group <- group
+  measures %>%
+    tidyr::pivot_longer(
+      cols = -dplyr::all_of(c("period", "group"))
+    ) %>%
+    dplyr::select(period, group, name, value)
+}
+
 aofm_parse_secondary_workbook <- function(path, aofm_table, csv = FALSE) {
   context <- sprintf("read_secondary(%s)", aofm_table)
-  aofm_validate_workbook(path, 3, context)
+  sheets <- aofm_validate_workbook(path, 3, context)
+  data_sheets <- sheets[!grepl("^notes\\b", sheets, ignore.case = TRUE)]
+  if (length(data_sheets) < 2L) {
+    stop(
+      sprintf("%s: expected at least two turnover data sheets", context),
+      call. = FALSE
+    )
+  }
 
-  sheet_list <- lapply(2:3, function(i) {
-    tmp1 <- readxl::read_excel(
-      path,
-      sheet = i,
-      skip = ifelse(grepl("tib", aofm_table), 3, 1)
-    ) %>%
-      `colnames<-`(c("period", colnames(.)[2:ncol(.)])) %>%
-      dplyr::mutate(
-        period = aofm_excel_date(period, origin = "1899-12-30"),
-        group = ifelse(i == 2, "tenor", "investor_type")
-      )
-
-    aofm_require_columns(tmp1, "period", context)
-    measure_columns <- setdiff(names(tmp1), c("period", "group"))
-    if (!length(measure_columns)) {
-      stop(sprintf("%s: no turnover measure columns found", context), call. = FALSE)
+  sheet_list <- lapply(
+    data_sheets,
+    function(sheet_name) {
+      aofm_parse_secondary_sheet(path, sheet_name, context)
     }
-    for (column in measure_columns) {
-      tmp1[[column]] <- aofm_numeric_measure(
-        tmp1[[column]],
-        column,
-        context
-      )
-    }
-
-    tmp1 %>%
-      tidyr::pivot_longer(dplyr::all_of(measure_columns))
-  })
-
-  tmp5 <- do.call(rbind, sheet_list)
+  )
+  tmp5 <- do.call(rbind, sheet_list) %>%
+    dplyr::distinct() %>%
+    dplyr::arrange(period, group, name)
   aofm_write_csv_if_requested(tmp5, csv, file.path("output", paste0(aofm_table, ".csv")))
 
   tmp5

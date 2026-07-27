@@ -1,6 +1,6 @@
 Package: readAOFM
 Title: Reads data from the AOFM's dataHub
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: 
     person("Joel", "Findlay", , "joel.findlay@gmail.com", role = c("aut", "cre"))
 Description: Downloads, imports, and tidies time series data from the Australian Office of Financial Management DataHub.
