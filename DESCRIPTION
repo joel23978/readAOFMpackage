@@ -1,31 +1,40 @@
 Package: readAOFM
-Title: Reads data from the AOFM's dataHub
-Version: 0.0.0.9000
-Authors@R: 
-    person("Joel", "Findlay", , "joel.findlay@gmail.com", role = c("aut", "cre"))
-Description: Downloads, imports, and tidies time series data from the Australian Office of Financial Mnagement DataHub.
+Title: Read and Tidy Australian Office of Financial Management Data
+Version: 0.1.0
+Authors@R:
+    person("Joel", "Findlay", email = "joel.findlay@gmail.com",
+           role = c("aut", "cre", "cph"))
+Description: Downloads, imports, and tidies time-series workbooks published
+    by the Australian Office of Financial Management (AOFM) Data Hub
+    <https://www.aofm.gov.au/data-hub>.
+    Provides a consistent interface to search the local catalogue, retrieve
+    source workbooks, and parse Australian Government Securities issuance,
+    transaction, position, ownership, turnover, and term-premium data into
+    long-form data frames or named lists.
 License: MIT + file LICENSE
-URL: https://joel23978.github.io/readAOFM/
+URL: https://joel23978.github.io/readAOFM/,
+    https://github.com/joel23978/readAOFM
 BugReports: https://github.com/joel23978/readAOFM/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
+Depends:
+    R (>= 4.1.0)
 Imports:
     curl,
-    tidyr,
-    dplyr,
-    readxl,
-    zoo,
     data.table,
+    dplyr (>= 1.0.0),
     janitor,
-    stringr,
     readr,
-    stats
+    readxl,
+    stats,
+    tidyr (>= 1.0.0),
+    zoo
 Suggests:
-    ggplot2,
+    knitr,
     pkgdown,
-    testthat
+    rmarkdown,
+    testthat (>= 3.1.4)
+VignetteBuilder: knitr
 Config/Needs/website: pkgdown
 Config/testthat/edition: 3
-Depends: 
-    R (>= 2.10)

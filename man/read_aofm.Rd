@@ -2,32 +2,87 @@
 % Please edit documentation in R/read_aofm.R
 \name{read_aofm}
 \alias{read_aofm}
-\title{Reads in and cleans any	data from the AOFM, returns cleaned in a long format}
+\title{Read and tidy one or more AOFM Data Hub tables}
 \usage{
 read_aofm(security = NULL, type = NULL, csv = FALSE)
 }
 \arguments{
-\item{security}{object you want data on, options include:
-tb, tib, tn, slf, summary, aggregate, ownership, retail, termpremium.
-Optional; when omitted, all supported tables are returned.}
+\item{security}{Optional exact security family (default \code{NULL}). Supported values are
+\code{summary}, \code{aggregate}, \code{tb}, \code{tib}, \code{tn}, \code{slf}, \code{ownership}, \code{retail},
+and \code{termpremium}. If omitted, all supported families are considered.}
 
-\item{type}{the specific type of data you want, optional when the inputs
-resolve to one or more supported tables:
-dealt, settlement, issuance, syndication, buyback, turnover,}
+\item{type}{Optional exact table type (default \code{NULL}). Supported values are \code{dealt},
+\code{settlement}, \code{issuance}, \code{syndication}, \code{buyback}, \code{turnover}, \code{public},
+and \code{nonresident}. If omitted, all supported types for \code{security} are
+considered.}
 
-\item{csv}{if \code{TRUE}, also writes the parsed output to a CSV file via the
-underlying reader}
+\item{csv}{Logical scalar (default \code{FALSE}). If \code{TRUE}, pass the option to each family reader;
+parsed output is also written beneath \verb{output/} in the current working
+directory. For a list result, one CSV is written per component.}
 }
 \value{
-AOFM selected AOFM data as a dataframe, list, or named list of
-table results when the inputs match multiple supported tables
+If the filters identify one table, the corresponding reader result:
+usually a long-form tibble/data frame with identifier columns, \code{date} or
+\code{period}, \code{name}, and \code{value}, or a named list of such data frames for
+multi-sheet workbook families. If the filters identify multiple tables,
+returns a named list keyed by stable table ID. With no filters, the list
+has one element for each of the 23 parser-supported tables.
+
+Transactional and syndication results preserve workbook identifier fields
+and pivot measures to \code{name}/\code{value}; parsed dates are \code{Date} objects where
+the source provides dates. End-of-month and ownership readers return named
+lists of component data frames. Exact measure columns follow the current
+AOFM workbook and may change if AOFM changes its source layout.
 }
 \description{
-Reads in and cleans any	data from the AOFM, returns cleaned in a long format
+\code{read_aofm()} is the preferred high-level interface to readAOFM. It maps
+the optional \code{security} and \code{type} filters to the package's supported AOFM
+table catalogue, downloads each selected workbook over HTTPS, and dispatches
+to the appropriate family reader. The package does not require credentials
+and the reader stages each workbook in a temporary file rather than
+maintaining a persistent cache. Transport is bounded internally with a
+15-second connect timeout, a 120-second overall transfer limit, a 30-second
+low-speed abort below 1 KiB/s, and a 100 MiB workbook-size limit; these are
+implementation safeguards rather than public arguments.
+}
+\details{
+Supported table IDs cover end-of-financial-year positions, end-of-month
+positions, Treasury Bond, Treasury Indexed Bond and Treasury Note
+transactions, syndications, buybacks, retail and securities-lending data,
+public and non-resident ownership, secondary-market turnover, and term
+premium estimates. The catalogue also contains seven historical files that
+do not have parsers; those rows are excluded here. Because their selector
+fields are empty, \code{\link[=download_aofm_xlsx]{download_aofm_xlsx()}} includes them only in an unfiltered
+raw download of the full catalogue, not as individually selectable tables.
+
+A selection that matches no supported table throws an error. Transport
+failures, non-workbook responses, empty files, missing sheets, missing
+required columns, and incompatible upstream layouts also throw errors. The
+AOFM source is external, so examples and tests should use local fixtures or
+mocks when deterministic, offline execution is required.
 }
 \examples{
-\dontrun{read_aofm("tb", "issuance")}
-# downloads Treasury Bond Issunace data from the AOFM
-# returns cleaned in a long format
+# Discovery is local and does not contact AOFM.
+search_aofm("tb issuance")[, c("id", "reader", "read_call")]
 
+# Exercise the real transactional parser without a network request when the
+# package's tb_issuance fixture is installed.
+if (requireNamespace("testthat", quietly = TRUE)) {
+  fixture <- system.file("extdata", "tb_issuance.xlsx", package = "readAOFM")
+  if (nzchar(fixture)) {
+    result <- suppressMessages(testthat::with_mocked_bindings(
+      read_aofm("tb", "issuance"),
+      download_aofm_table_workbook = function(...) fixture,
+      .package = "readAOFM"
+    ))
+    c(rows = nrow(result), columns = ncol(result))
+  }
+}
+
+}
+\seealso{
+\code{\link[=search_aofm]{search_aofm()}} for offline discovery, \code{\link[=download_aofm_xlsx]{download_aofm_xlsx()}} for
+raw workbook downloads, and the family readers \code{\link[=read_eom]{read_eom()}},
+\code{\link[=read_transactional]{read_transactional()}}, \code{\link[=read_syndication]{read_syndication()}}, \code{\link[=read_ownership]{read_ownership()}},
+\code{\link[=read_secondary]{read_secondary()}}, \code{\link[=read_premium]{read_premium()}}, and \code{\link[=read_eofy]{read_eofy()}}.
 }

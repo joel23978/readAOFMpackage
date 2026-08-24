@@ -2,23 +2,42 @@
 % Please edit documentation in R/individual_table_functions.R
 \name{read_secondary}
 \alias{read_secondary}
-\title{Reads in and cleans data under "AGS Secondary Market Turnover" from the AOFM, returns cleaned in a long format}
+\title{Read AOFM secondary-market turnover}
 \usage{
 read_secondary(aofm_table, csv = FALSE)
 }
 \arguments{
-\item{aofm_table}{object to download, typically called from read_aofm()}
+\item{aofm_table}{Either \code{tb_turnover} or \code{tib_turnover}. It is normally
+selected through \code{\link[=read_aofm]{read_aofm()}}.}
 
-\item{csv}{if \code{TRUE}, also writes the parsed output to \verb{output/}}
+\item{csv}{Logical scalar (default \code{FALSE}). If \code{TRUE}, write the parsed result to
+\verb{output/<aofm_table>.csv} beneath the current working directory.}
 }
 \value{
-AOFM Transactional data as a dataframe
+A tibble/data frame in long form with \code{period} as a \code{Date}, \code{group}
+equal to \code{tenor} or \code{investor_type}, and \code{name}/\code{value} columns for the
+turnover measures. Exact measure columns follow the current workbook.
 }
 \description{
-Reads in and cleans data under "AGS Secondary Market Turnover" from the AOFM, returns cleaned in a long format
+\code{read_secondary()} combines the tenor and investor-type worksheets from a
+Treasury Bond or Treasury Indexed Bond turnover workbook. The workbook is
+fetched over HTTPS without credentials and staged in a temporary file; the
+package does not maintain a persistent cache. The package-wide
+bounded timeout and size safeguards are applied.
+}
+\details{
+AOFM publishes turnover quarterly with a reporting lag. Missing
+sheets, periods, or changed workbook layouts cause an error.
 }
 \examples{
-\dontrun{read_secondary("tb_turnover")}
-# downloads Treasury Bond Turnover data from the AOFM, returns cleaned in a long format
+search_aofm("secondary market turnover")
 
+if (interactive()) {
+  read_secondary("tb_turnover")
+}
+
+}
+\seealso{
+\code{\link[=read_aofm]{read_aofm()}} for the preferred interface and \code{\link[=search_aofm]{search_aofm()}} for
+offline catalogue discovery.
 }

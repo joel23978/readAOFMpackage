@@ -27,7 +27,12 @@ download_aofm_workbook <- function(url, destfile) {
   handle <- curl::new_handle(
     followlocation = TRUE,
     maxredirs = 10L,
-    useragent = "readAOFM/0.0.0.9000"
+    useragent = "readAOFM/0.1.0",
+    connecttimeout = 15,
+    timeout = 120,
+    low_speed_time = 30,
+    low_speed_limit = 1024,
+    maxfilesize = 100 * 1024^2
   )
 
   response <- tryCatch(

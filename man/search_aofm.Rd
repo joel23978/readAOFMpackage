@@ -2,30 +2,62 @@
 % Please edit documentation in R/search_aofm.R
 \name{search_aofm}
 \alias{search_aofm}
-\title{Search the supported AOFM table catalog}
+\title{Search the supported AOFM table catalogue}
 \usage{
 search_aofm(query, read = FALSE, csv = FALSE)
 }
 \arguments{
-\item{query}{Search string used to match supported AOFM tables}
+\item{query}{One non-empty search string. Phrases are preferred when they
+match; otherwise all query tokens or any matching token are used.}
 
-\item{read}{if \code{TRUE}, reads the matched tables via \code{read_aofm()} instead of
-returning the catalog rows}
+\item{read}{Logical scalar (default \code{FALSE}). If \code{FALSE}, return catalogue rows.
+If \code{TRUE}, read each matching table and return the parsed result.}
 
-\item{csv}{if \code{TRUE} and \code{read = TRUE}, also writes matched outputs to CSV
-via \code{read_aofm()}}
+\item{csv}{Logical scalar (default \code{FALSE}). When \code{read = TRUE} and \code{csv = TRUE}, pass the
+option to \code{\link[=read_aofm]{read_aofm()}} so parsed CSVs are written below \verb{output/} in the
+current working directory. It has no effect when \code{read = FALSE}.}
 }
 \value{
-A dataframe of supported table matches, or the result of
-\code{read_aofm()} when \code{read = TRUE}
+When \code{read = FALSE}, a base data frame with columns \code{security},
+\code{type}, \code{id}, \code{reader}, and \code{read_call}; rows are reset to consecutive
+integers and unsupported/raw-only catalogue rows are not included. A
+query with no match returns a zero-row data frame. When \code{read = TRUE}, a
+single parsed table is returned for one match, or a named list keyed by
+table ID for multiple matches. A no-match \code{read = TRUE} call throws an
+error before any download.
 }
 \description{
-Search the supported AOFM table catalog
+\code{search_aofm()} searches the package's local catalogue without downloading
+a workbook or contacting the AOFM website. Matching is case-insensitive and
+accepts stable IDs, security/type values, and useful aliases such as
+"treasury bond", "inflation", "foreign ownership", "turnover", and
+"term premium". Use the returned \code{read_call} column to pass a selected table
+to \code{\link[=read_aofm]{read_aofm()}}.
+}
+\details{
+With \code{read = TRUE}, each match is immediately passed to \code{\link[=read_aofm]{read_aofm()}} and
+therefore requires an HTTPS request for every selected workbook. The
+package does not require credentials and the reader does not keep a
+persistent cache.
+
+Invalid queries (non-character, length other than one, \code{NA}, or blank after
+trimming) throw an error. Search results are deterministic for a fixed
+catalogue, but parsed values and available source files depend on the live
+AOFM workbooks.
 }
 \examples{
+# All of these searches are offline.
 search_aofm("tb issuance")
 search_aofm("issuance")
 search_aofm("treasury bond")
 search_aofm("inflation")
-\dontrun{search_aofm("tb issuance", read = TRUE)}
+
+# Reading a match is opt-in and network-dependent; keep it interactive.
+if (interactive()) {
+  search_aofm("tb issuance", read = TRUE)
+}
+}
+\seealso{
+\code{\link[=read_aofm]{read_aofm()}} for downloading and parsing, and
+\code{\link[=download_aofm_xlsx]{download_aofm_xlsx()}} for saving raw workbooks.
 }

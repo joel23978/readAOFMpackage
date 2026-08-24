@@ -1,0 +1,140 @@
+---
+title: "Getting started with readAOFM"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with readAOFM}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  warning = FALSE,
+  message = FALSE
+)
+
+fixture_path <- function(filename) {
+  installed <- system.file("extdata", filename, package = "readAOFM")
+  if (nzchar(installed) && file.exists(installed)) {
+    return(installed)
+  }
+
+  source_candidates <- c(
+    file.path("inst", "extdata", filename),
+    file.path("..", "inst", "extdata", filename)
+  )
+  source <- source_candidates[file.exists(source_candidates)]
+  if (length(source) > 0L) {
+    return(normalizePath(source[[1]], mustWork = TRUE))
+  }
+
+  stop(sprintf("Packaged fixture '%s' was not found.", filename), call. = FALSE)
+}
+
+tb_issuance_fixture <- fixture_path("tb_issuance.xlsx")
+```
+
+`readAOFM` reads workbook data published by the Australian Office of Financial
+Management (AOFM) Data Hub and returns R-friendly data frames or named lists.
+The examples in this article separate the two parts of a normal workflow:
+discover a table locally, then read a selected workbook. The first successful
+read uses a packaged workbook snapshot, so it is deterministic and does not
+contact AOFM.
+
+## Find a table without downloading anything
+
+`search_aofm()` searches the package's local catalogue. By default it returns
+metadata and ready-to-run calls; it does not make a network request.
+
+```{r search-first}
+readAOFM::search_aofm("tb issuance")[, c("id", "reader", "read_call")]
+```
+
+The search accepts ordinary descriptions as well as exact terminology. For
+example, these searches identify the indexed-bond and non-resident ownership
+families:
+
+```{r search-language}
+readAOFM::search_aofm("inflation")
+readAOFM::search_aofm("foreign ownership")
+```
+
+The `read_call` column is useful when a query returns more than one table. For
+example, `search_aofm("issuance")` finds Treasury Bond, Treasury Indexed Bond,
+and Treasury Note issuance; reading all three would perform three workbook
+downloads.
+
+## Read the first table using a local fixture
+
+The public entry point is `read_aofm(security, type, csv = FALSE)`. The
+`security` and `type` values are exact selectors. A single match returns that
+table's parsed object. The package's tests and vignettes use
+`testthat::with_mocked_bindings()` only to replace the internal downloader with
+the packaged workbook; the call below still exercises the public dispatcher
+and the real parser.
+
+```{r first-read}
+tb_issuance <- testthat::with_mocked_bindings(
+  readAOFM::read_aofm("tb", "issuance"),
+  download_aofm_table_workbook = function(aofm_table) {
+    stopifnot(identical(aofm_table, "tb_issuance"))
+    tb_issuance_fixture
+  },
+  .package = "readAOFM"
+)
+
+stopifnot(
+  is.data.frame(tb_issuance),
+  all(c("date_held", "tender_number", "maturity", "name", "value") %in%
+        names(tb_issuance)),
+  inherits(tb_issuance$date_held, "Date")
+)
+
+data.frame(
+  object_class = paste(class(tb_issuance), collapse = ", "),
+  rows = nrow(tb_issuance),
+  columns = ncol(tb_issuance),
+  date_class = paste(class(tb_issuance$date_held), collapse = ", "),
+  stringsAsFactors = FALSE
+)
+```
+
+The transactional reader preserves workbook identifiers and pivots numeric
+measures into the long-form `name`/`value` columns. Date fields handled by the
+reader are returned as `Date` objects. Exact source columns can change if AOFM
+changes its workbook, so inspect names before building a downstream analysis.
+
+```{r first-read-preview}
+utils::head(tb_issuance[c("date_held", "maturity", "name", "value")], 3)
+```
+
+For a single table, `read_aofm()` returns the parsed data frame directly. When
+selectors match several supported tables, it returns a named list keyed by
+table ID; omitting both selectors requests all 23 parser-supported tables and
+can therefore involve many downloads. `csv = TRUE` keeps the same return value
+and additionally writes the reader's CSV output under `output/` in the current
+working directory; see the network and outputs article for an isolated example.
+
+## Optional live read
+
+The normal live call is intentionally guarded. Set
+`READAOFM_RUN_LIVE_EXAMPLES=true` in an interactive or development session to
+opt in after checking that the AOFM site is reachable. The default vignette
+build path never makes a network request.
+
+```{r live-read}
+if (interactive() && identical(Sys.getenv("READAOFM_RUN_LIVE_EXAMPLES"), "true")) {
+  live_tb_issuance <- readAOFM::read_aofm("tb", "issuance")
+  stopifnot(is.data.frame(live_tb_issuance))
+  utils::head(live_tb_issuance, 3)
+} else {
+  cat("Live read skipped; set READAOFM_RUN_LIVE_EXAMPLES=true to opt in.\n")
+}
+```
+
+Live readers fetch public workbooks over HTTPS and do not require AOFM
+credentials. They stage each workbook in a temporary file rather than using a
+persistent package download cache. Upstream availability and workbook layout
+remain outside the package's control.

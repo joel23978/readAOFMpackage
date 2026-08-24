@@ -2,30 +2,62 @@
 % Please edit documentation in R/download_excel.R
 \name{download_aofm_xlsx}
 \alias{download_aofm_xlsx}
-\title{Download xlsx.xls files from AOFM DataHub}
+\title{Download raw AOFM Data Hub workbooks}
 \usage{
 download_aofm_xlsx(security = NULL, type = NULL)
 }
 \arguments{
-\item{security}{object you want data on, options include:
-tb, tib, tn, slf, summary, aggregate, ownership, retail, termpremium}
+\item{security}{Optional exact security family (default \code{NULL}). Supported values are
+\code{summary}, \code{aggregate}, \code{tb}, \code{tib}, \code{tn}, \code{slf}, \code{ownership}, \code{retail},
+and \code{termpremium}.}
 
-\item{type}{the specific type of data you want, occasionally optional:
-dealt, settlement, issuance, syndication, buyback, turnover,}
+\item{type}{Optional exact table type (default \code{NULL}). Supported values are \code{dealt},
+\code{settlement}, \code{issuance}, \code{syndication}, \code{buyback}, \code{turnover}, \code{public},
+and \code{nonresident}. If either argument is omitted, every matching catalogue
+row is selected.}
 }
 \value{
-a list of downloaded files
+A character vector of matched table IDs, returned invisibly after
+the files have been downloaded. If no row matches, \code{NULL} is returned and
+an explanatory message is printed. The files themselves are written to
+\verb{data/} and are not returned as R objects. The function creates \verb{data/}
+before checking whether a selector matched, so a no-match call can create
+an empty directory.
 }
 \description{
-Download xlsx.xls files from AOFM DataHub
+\code{download_aofm_xlsx()} resolves exact \code{security} and \code{type} values against
+the package's local AOFM catalogue, then downloads the matching \code{.xls} or
+\code{.xlsx} workbooks over HTTPS. Raw files are written beneath \verb{data/} in the
+current working directory. The function does not require credentials and
+does not maintain a package cache. Use \code{\link[=read_aofm]{read_aofm()}} for the usual
+download-and-parse workflow; use \code{\link[=search_aofm]{search_aofm()}} to discover valid tables
+without a network request.
+Transport is bounded internally with a 15-second connect timeout, a
+120-second overall transfer limit, a 30-second low-speed abort below
+1 KiB/s, and a 100 MiB workbook-size limit. These safeguards are not public
+function arguments.
+}
+\details{
+The catalogue contains seven historical rows without a parser. Their
+selector fields are not populated, so they cannot be selected individually;
+an unfiltered \code{download_aofm_xlsx()} call includes them together with every
+other catalogue workbook. They cannot be read by \code{\link[=read_aofm]{read_aofm()}} until a
+parser exists. A changed AOFM URL, non-workbook response, or changed workbook
+layout causes an error from the downloader or the subsequent parser.
 }
 \examples{
-\dontrun{download_aofm_xlsx("tb", "issuance")}
-# downloads AOFM Treasury Bond Issuance data to data/tb_issuance.xlsx
-\dontrun{download_aofm_xlsx("tb")}
-# downloads all Treasury Bond data from the AOFM Datahub incl
-# issunace, syndication details, position data etc to data/
-\dontrun{download_aofm_xlsx()}
-# downloads all data from the AOFM Datahub to data/
+# Catalogue discovery is offline and does not create files.
+search_aofm("tb issuance")[, c("id", "read_call")]
+
+# Downloading is opt-in in examples because it requires the live AOFM site.
+if (interactive()) {
+  download_in_temporary_directory <- function() {
+    old <- getwd()
+    on.exit(setwd(old), add = TRUE)
+    setwd(tempdir())
+    download_aofm_xlsx("tb", "issuance")
+  }
+  download_in_temporary_directory()
+}
 
 }

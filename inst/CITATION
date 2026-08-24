@@ -1,0 +1,10 @@
+citHeader("To cite readAOFM in publications use:")
+
+bibentry(
+  bibtype = "Manual",
+  title = "readAOFM: Read and Tidy Australian Office of Financial Management Data",
+  author = person("Joel", "Findlay"),
+  year = "2026",
+  note = "R package version 0.1.0",
+  url = "https://github.com/joel23978/readAOFM"
+)

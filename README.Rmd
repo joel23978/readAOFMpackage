@@ -4,101 +4,252 @@ output: github_document
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-```{r, include = FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  warning = FALSE,
+  message = FALSE
 )
 ```
 
 # readAOFM
 
-`readAOFM` downloads workbook data from the Australian Office of Financial
-Management (AOFM) DataHub and returns cleaned R data frames or lists.
+[![R-CMD-check](https://github.com/joel23978/readAOFM/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/joel23978/readAOFM/actions/workflows/R-CMD-check.yaml)
+[![pkgdown](https://github.com/joel23978/readAOFM/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/joel23978/readAOFM/actions/workflows/pkgdown.yaml)
+
+`readAOFM` helps R users download and tidy workbook data published by the
+[Australian Office of Financial Management (AOFM)](https://www.aofm.gov.au/)
+Data Hub. It is for analysts, researchers, and reproducible reports that need
+Australian Government securities, issuance, ownership, turnover, or
+term-premium data in R-friendly tabular shapes.
+
+This is the development version from GitHub. It is not yet a CRAN release;
+the CRAN installation command below applies only after CRAN acceptance.
 
 ## Installation
 
-You can install the development version from GitHub with:
+Install the development version from GitHub with [`pak`](https://pak.r-lib.org/):
 
-``` r
-# install.packages("remotes")
-remotes::install_github("joel23978/readAOFM")
+```r
+install.packages("pak")
+pak::pak("joel23978/readAOFM")
 ```
 
-## Primary interface
+After acceptance on CRAN, use:
 
-The main entrypoint is `read_aofm()`.
-
-- `security`: one of `tb`, `tib`, `tn`, `slf`, `summary`, `aggregate`,
-  `ownership`, `retail`, `term.premium`; optional when you want all supported
-  tables
-- `type`: one of `dealt`, `settlement`, `issuance`, `syndication`,
-  `buyback`, `turnover`; optional when `security` should return all matching
-  supported tables
-- `csv`: if `TRUE`, also writes the parsed output to CSV via the underlying
-  reader
-
-When `security` is omitted, `read_aofm()` returns a named list of all
-supported tables. When only `type` is omitted, it returns all supported
-tables for that security.
-
-## Example
-
-``` r
-library(readAOFM)
-
-tb_issuance <- read_aofm("tb", "issuance")
-head(tb_issuance)
-
-all_tables <- read_aofm()
-length(all_tables)
-
-tb_all <- read_aofm("tb")
-names(tb_all)
+```r
+install.packages("readAOFM")
 ```
 
-## Search helper
+## First success without a network request
 
-`search_aofm()` searches the supported table catalog and returns matching
-tables together with ready-to-run `read_aofm()` calls.
+`search_aofm()` searches the local table catalogue. Its default
+`read = FALSE` does not contact AOFM and returns ready-to-run calls.
 
-``` r
-search_aofm("tb issuance")
-search_aofm("issuance")
-search_aofm("treasury bond")
-search_aofm("inflation")
+```{r first-success}
+if (requireNamespace("readAOFM", quietly = TRUE)) {
+  catalog <- readAOFM::search_aofm("tb issuance")
+  catalog[, c("id", "read_call")]
+}
 ```
 
-If you want the data immediately, set `read = TRUE`:
+The same helper accepts ordinary descriptions:
 
-``` r
-tb_issuance <- search_aofm("tb issuance", read = TRUE)
-all_issuance <- search_aofm("issuance", read = TRUE)
+```r
+readAOFM::search_aofm("foreign ownership")
+readAOFM::search_aofm("inflation")
+readAOFM::search_aofm("secondary market")
 ```
 
-For downstream analysis or charting, add your preferred tidyverse packages in
-the calling script:
+## First parsed table, still offline
 
-``` r
-library(dplyr)
-library(ggplot2)
-library(readAOFM)
+The package ships a small official workbook snapshot for deterministic
+documentation and tests. This example replaces only the internal downloader;
+it still runs the public dispatcher and transactional parser, without making a
+network request.
 
-read_aofm("tb", "issuance") %>%
-  filter(name == "coverage_ratio") %>%
-  ggplot(aes(x = date_held, y = value)) +
-  geom_point() +
-  theme_minimal()
+```{r first-parsed-table}
+fixture <- system.file("extdata", "tb_issuance.xlsx", package = "readAOFM")
+if (requireNamespace("testthat", quietly = TRUE) && nzchar(fixture)) {
+  tb_issuance <- suppressMessages(testthat::with_mocked_bindings(
+    readAOFM::read_aofm("tb", "issuance"),
+    download_aofm_table_workbook = function(...) fixture,
+    .package = "readAOFM"
+  ))
+
+  data.frame(
+    rows = nrow(tb_issuance),
+    columns = ncol(tb_issuance),
+    first_tender = min(tb_issuance$date_held),
+    latest_tender_in_snapshot = max(tb_issuance$date_held)
+  )
+}
 ```
 
-## Secondary helper
+Packaged snapshots are examples, not a runtime cache or a substitute for the
+current AOFM source. Normal reads fetch the live workbook as shown next.
 
-`download_aofm_xlsx()` is still available if you want the raw workbooks saved
-locally, but `read_aofm()` is the preferred interface for normal use.
+## Read a live table
 
-## Disclaimer
+Readers fetch the current workbook from AOFM. This live example is guarded so
+that it runs when copied into an interactive R session but never makes a
+network request while the README is built or during CRAN checks.
 
-The AOFM website may change in ways that require updates to this package.
+```{r live-read}
+if (interactive()) {
+  x <- readAOFM::read_aofm("tb", "issuance")
+  stopifnot(is.data.frame(x), all(c("name", "value") %in% names(x)))
+  utils::head(x, 3)
+}
+```
 
-This package is not affiliated with or endorsed by AOFM. All data is provided
-under any terms set out on the AOFM website.
+`read_aofm()` returns one parsed object for one match and a named list
+when selectors match several tables. The default call selects all parsed
+tables and can download a substantial amount of data, so start with a specific
+pair.
+
+## Supported AOFM data
+
+The current catalogue contains 23 parsed tables. These table IDs are stable
+catalogue identifiers; the public `read_aofm()` interface normally uses their
+`security` and `type` selectors.
+
+| AOFM family | Parsed table IDs | Reader and shape |
+| --- | --- | --- |
+| End-of-financial-year summary | `summary` | `read_eofy()`; one long data frame |
+| End-of-month positions | `aggregate_position_dealt`, `aggregate_position_settlement`, `tb_position_dealt`, `tb_position_settlement`, `tib_position_dealt`, `tib_position_settlement`, `tn_position_dealt`, `tn_position_settlement` | `read_eom()`; named list of position data frames |
+| Transactional issuance/buybacks | `tb_issuance`, `tb_buyback`, `tib_issuance`, `tib_buyback`, `tn_issuance`, `retail`, `slf` | `read_transactional()`; one long data frame |
+| Syndication details | `tb_syndication`, `tib_syndication` | `read_syndication()`; one long data frame |
+| Ownership | `ownership_public`, `ownership_nonresident` | `read_ownership()`; named list of data frames |
+| Secondary-market turnover | `tb_turnover`, `tib_turnover` | `read_secondary()`; one long data frame |
+| Term premium | `termpremium` | `read_premium()`; one long data frame |
+
+Seven catalogue entries have no parser in this version and are raw-download-only
+metadata: `tb_issuance_conversion`, `indexation_factors`,
+`rmbs_transactions`, `rmbs_auctions`, `interest_rate_swaps`,
+`cross_currency_swaps`, and `portfolio_overview`. They are excluded from the
+supported catalogue searched by `search_aofm()`; because that function falls
+back to token matching, a raw-only ID can still coincidentally match a
+supported row. Only IDs in the returned rows are readable. The raw-only
+entries' selector fields are empty, so they cannot be requested individually;
+the current raw helper includes them only when `download_aofm_xlsx()` is
+called without either selector, which also downloads every other catalogue
+workbook.
+
+## Common workflows
+
+Select one table or one ownership slice:
+
+```r
+tb_issuance <- readAOFM::read_aofm("tb", "issuance")
+ownership <- readAOFM::read_aofm("ownership", "nonresident")
+```
+
+Omitting `type` returns all parsed tables for a security. Omitting
+`security` and specifying `type` returns all matching securities.
+These calls are live downloads:
+
+```r
+tb_tables <- readAOFM::read_aofm("tb")
+names(tb_tables)
+
+issuance_tables <- readAOFM::read_aofm(type = "issuance")
+names(issuance_tables)
+```
+
+Use the local catalogue before downloading:
+
+```r
+readAOFM::search_aofm("issuance")
+readAOFM::search_aofm("treasury bond")
+```
+
+Most parsed frames are long, retain source identifiers, and expose `name`
+and `value` measurement columns. Dates handled by a reader are returned
+as `Date` objects. Inspect the actual workbook-derived columns before
+writing analysis code:
+
+```r
+names(tb_issuance)
+str(tb_issuance)
+```
+
+EOM and ownership readers return named lists; inspect both levels with
+`names(result)` and `names(result[[1]])`.
+
+### CSV and raw workbook output
+
+`csv = TRUE` keeps returning the parsed object and additionally writes under
+`output/` relative to the current working directory. The
+`download_aofm_xlsx()` helper saves raw workbooks under `data/` and
+prints selected table IDs.
+
+```r
+# Run in a project directory where writing is intentional:
+# x <- readAOFM::read_aofm("tb", "issuance", csv = TRUE)
+# file.exists(file.path("output", "tb_issuance.csv"))
+
+# readAOFM::download_aofm_xlsx("tb", "issuance")
+# file.exists(file.path("data", "tb_issuance.xlsx"))
+```
+
+Transactional, syndication, secondary, and premium readers use
+`output/<table-id>.csv`; EOFY, EOM, and ownership readers may write one
+file per workbook sheet.
+
+## Network, credentials, and cache behavior
+
+- `search_aofm(query)` with `read = FALSE` is local and network-free.
+- Readers and `search_aofm(..., read = TRUE)` fetch public AOFM workbooks
+  over HTTPS.
+- Downloads use a 15-second connection timeout, a 120-second transfer limit,
+  a low-speed abort after 30 seconds below 1 KiB/s, and a 100 MiB file limit.
+- No AOFM username, password, API key, or other credential is required or
+  collected.
+- Readers use a temporary workbook for parsing and do not provide a persistent
+  download cache. Repeating a read can fetch a newer workbook.
+- `csv = TRUE` writes to `output/` and `download_aofm_xlsx()` writes
+  to `data/` relative to the current working directory.
+
+## Limitations and troubleshooting
+
+AOFM controls the source URLs and workbook layouts. Changed URLs, an HTML
+error page, network failure, or changed sheets/columns can make a read fail.
+The package validates HTTP responses, workbook signatures, sheet counts, and
+required columns and reports the table context.
+
+The package does not parse the seven raw-only IDs above, does not accept a
+local workbook path through public readers, and does not promise identical
+identifier columns across source families. It is not a versioned data
+snapshot.
+
+| Symptom | What to check |
+| --- | --- |
+| No supported table matched | Use `search_aofm()` and its generated `read_call`. |
+| Download or HTTP error | Check network, proxy, and SSL access to AOFM, then retry. |
+| HTML or invalid-workbook error | The source may have redirected or returned an error page instead of an Excel workbook; report the table ID and URL if it persists. |
+| Missing sheet or required-column error | AOFM may have changed the workbook layout; report the table ID, error, and access date. |
+| Cannot create `data/` or `output/` | Use a writable project directory, or leave `csv = FALSE` and avoid raw downloads. |
+
+## Citation, licensing, and attribution
+
+Package source code is released under the MIT license; see
+[`LICENSE`](https://github.com/joel23978/readAOFM/blob/main/LICENSE). Use
+`citation("readAOFM")` for the package citation.
+
+Data are sourced from the AOFM Data Hub. Follow the AOFM's current
+[copyright and licence terms](https://www.aofm.gov.au/copyright), including
+attribution requirements and exclusions for third-party material. Identify the
+Australian Office of Financial Management and the AOFM Data Hub in downstream
+work and do not imply AOFM endorsement. `readAOFM` is independent and is
+not affiliated with or endorsed by AOFM.
+
+## Contributing and reporting issues
+
+Please report reproducible parser failures, changed AOFM workbook layouts, or
+documentation problems through the
+[GitHub issue tracker](https://github.com/joel23978/readAOFM/issues). Pull
+requests can be proposed through the repository's
+[pull-request page](https://github.com/joel23978/readAOFM/pulls); detailed
+development guidance is in `CONTRIBUTING.md` at the repository root.

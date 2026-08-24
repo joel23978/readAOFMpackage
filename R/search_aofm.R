@@ -100,21 +100,54 @@ aofm_search_score <- function(query, tokens, text, security, type, id) {
   score + length(tokens) * 10L
 }
 
-#' Search the supported AOFM table catalog
+#' Search the supported AOFM table catalogue
 #'
-#' @param query Search string used to match supported AOFM tables
-#' @param read if `TRUE`, reads the matched tables via `read_aofm()` instead of
-#'   returning the catalog rows
-#' @param csv if `TRUE` and `read = TRUE`, also writes matched outputs to CSV
-#'   via `read_aofm()`
-#' @returns A dataframe of supported table matches, or the result of
-#'   `read_aofm()` when `read = TRUE`
+#' `search_aofm()` searches the package's local catalogue without downloading
+#' a workbook or contacting the AOFM website. Matching is case-insensitive and
+#' accepts stable IDs, security/type values, and useful aliases such as
+#' "treasury bond", "inflation", "foreign ownership", "turnover", and
+#' "term premium". Use the returned `read_call` column to pass a selected table
+#' to [read_aofm()].
+#'
+#' With `read = TRUE`, each match is immediately passed to [read_aofm()] and
+#' therefore requires an HTTPS request for every selected workbook. The
+#' package does not require credentials and the reader does not keep a
+#' persistent cache.
+#'
+#' @param query One non-empty search string. Phrases are preferred when they
+#'   match; otherwise all query tokens or any matching token are used.
+#' @param read Logical scalar (default `FALSE`). If `FALSE`, return catalogue rows.
+#'   If `TRUE`, read each matching table and return the parsed result.
+#' @param csv Logical scalar (default `FALSE`). When `read = TRUE` and `csv = TRUE`, pass the
+#'   option to [read_aofm()] so parsed CSVs are written below `output/` in the
+#'   current working directory. It has no effect when `read = FALSE`.
+#' @returns When `read = FALSE`, a base data frame with columns `security`,
+#'   `type`, `id`, `reader`, and `read_call`; rows are reset to consecutive
+#'   integers and unsupported/raw-only catalogue rows are not included. A
+#'   query with no match returns a zero-row data frame. When `read = TRUE`, a
+#'   single parsed table is returned for one match, or a named list keyed by
+#'   table ID for multiple matches. A no-match `read = TRUE` call throws an
+#'   error before any download.
+#'
+#' @details
+#' Invalid queries (non-character, length other than one, `NA`, or blank after
+#' trimming) throw an error. Search results are deterministic for a fixed
+#' catalogue, but parsed values and available source files depend on the live
+#' AOFM workbooks.
+#'
+#' @seealso [read_aofm()] for downloading and parsing, and
+#'   [download_aofm_xlsx()] for saving raw workbooks.
 #' @examples
+#' # All of these searches are offline.
 #' search_aofm("tb issuance")
 #' search_aofm("issuance")
 #' search_aofm("treasury bond")
 #' search_aofm("inflation")
-#' \dontrun{search_aofm("tb issuance", read = TRUE)}
+#'
+#' # Reading a match is opt-in and network-dependent; keep it interactive.
+#' if (interactive()) {
+#'   search_aofm("tb issuance", read = TRUE)
+#' }
 #' @export
 search_aofm <- function(query, read = FALSE, csv = FALSE) {
   if (!is.character(query) || length(query) != 1 || is.na(query) || !nzchar(trimws(query))) {
