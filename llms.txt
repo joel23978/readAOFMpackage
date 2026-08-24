@@ -301,7 +301,8 @@ packaged snapshots provide fixed inputs for documentation and tests.
 
 ## Citation, licensing, and attribution
 
-Package source code is released under the MIT license; see
+Package code and documentation are released under the MIT license and
+are copyright Joel F; see
 [`LICENSE`](https://github.com/joel23978/readAOFM/blob/main/LICENSE).
 Use `citation("readAOFM")` for the package citation. The package author
 and maintainer is Joel F.
