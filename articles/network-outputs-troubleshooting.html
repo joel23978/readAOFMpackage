@@ -59,22 +59,22 @@
 
     
     
-<p><code>readAOFM</code> has two kinds of I/O: readers fetch public AOFM
-Data Hub workbooks and optionally write parsed CSV files;
-<code><a href="../reference/search_aofm.html">search_aofm()</a></code> is local and has no I/O. The examples below
-keep all writes in an isolated temporary directory and replace the
-network downloader with a packaged workbook snapshot.</p>
+<p><code>readAOFM</code> separates local catalogue discovery from
+workbook I/O. Readers fetch public AOFM Data Hub workbooks and can
+optionally write parsed CSV files, while <code><a href="../reference/search_aofm.html">search_aofm()</a></code>
+searches installed metadata. The examples below keep every write in an
+isolated temporary directory and use a packaged workbook snapshot for
+deterministic parsing.</p>
 <div class="section level2">
 <h2 id="network-and-staging-behavior">Network and staging behavior<a class="anchor" aria-label="anchor" href="#network-and-staging-behavior"></a>
 </h2>
 <p>The reader path resolves a table from the local catalogue, requests
 its AOFM workbook over HTTPS, validates that the response looks like an
 Excel workbook, and stages the file in a temporary location for parsing.
-It does not require credentials and does not maintain a persistent
-package cache. Repeating a live read can therefore observe a newer AOFM
-workbook. Transport failures, HTTP errors, empty files, non-workbook
-responses, and changed source layouts are reported with table
-context.</p>
+Public workbooks are available without package credentials, and each
+live read retrieves the current source. Transport failures, HTTP errors,
+empty files, non-workbook responses, and changed source layouts are
+reported with table context.</p>
 <p>Use the offline search before a live call:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="../reference/search_aofm.html">search_aofm</a></span><span class="op">(</span><span class="st">"tb issuance"</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"id"</span>, <span class="st">"read_call"</span><span class="op">)</span><span class="op">]</span></span>
@@ -156,8 +156,7 @@ network and parsing cost is intended.</p>
 <div class="section level2">
 <h2 id="common-errors-and-recovery">Common errors and recovery<a class="anchor" aria-label="anchor" href="#common-errors-and-recovery"></a>
 </h2>
-<p>An invalid selector is detected locally and does not contact
-AOFM:</p>
+<p>Selector validation happens locally before any AOFM request:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span></span>
 <span>  <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="../reference/read_aofm.html">read_aofm</a></span><span class="op">(</span><span class="st">"not-a-security"</span><span class="op">)</span>,</span>
@@ -207,7 +206,7 @@ offline.</p>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Joel Findlay.</p>
+  <p>Developed by Joel F.</p>
 </div>
 
 <div class="pkgdown-footer-right">

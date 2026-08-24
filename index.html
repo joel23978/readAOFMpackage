@@ -11,8 +11,8 @@
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="readAOFM">
-<meta name="description" content="Download, search, and read AOFM Data Hub tables in R.">
-<meta property="og:description" content="Download, search, and read AOFM Data Hub tables in R.">
+<meta name="description" content="Discover, retrieve, and parse AOFM Data Hub time series in R.">
+<meta property="og:description" content="Discover, retrieve, and parse AOFM Data Hub time series in R.">
 <meta name="google-site-verification" content="0UYFbCWPcIUQS3dci9qmQqKvSXMaS8jTuulSx_dipoU">
 </head>
 <body>
@@ -50,28 +50,25 @@
 <div class="page-header"><h1 id="readaofm">readAOFM<a class="anchor" aria-label="anchor" href="#readaofm"></a>
 </h1></div>
 <p><a href="https://github.com/joel23978/readAOFM/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/joel23978/readAOFM/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://github.com/joel23978/readAOFM/actions/workflows/pkgdown.yaml" class="external-link"><img src="https://github.com/joel23978/readAOFM/actions/workflows/pkgdown.yaml/badge.svg" alt="pkgdown"></a></p>
-<p><code>readAOFM</code> helps R users download and tidy workbook data published by the <a href="https://www.aofm.gov.au/" class="external-link">Australian Office of Financial Management (AOFM)</a> Data Hub. It is for analysts, researchers, and reproducible reports that need Australian Government securities, issuance, ownership, turnover, or term-premium data in R-friendly tabular shapes.</p>
-<p>This is the development version from GitHub. It is not yet a CRAN release; the CRAN installation command below applies only after CRAN acceptance.</p>
+<p><code>readAOFM</code> gives R users a reproducible path from the <a href="https://www.aofm.gov.au/" class="external-link">Australian Office of Financial Management (AOFM)</a> Data Hub catalogue to tidy, workbook-derived tables. Analysts and researchers can discover and retrieve Australian Government securities data covering issuance, transactions, positions, ownership, turnover, and term-premium series for analysis and reporting.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p>Install the development version from GitHub with <a href="https://pak.r-lib.org/" class="external-link"><code>pak</code></a>:</p>
+<p>Install the current GitHub version with <a href="https://pak.r-lib.org/" class="external-link"><code>pak</code></a>:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"pak"</span><span class="op">)</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"joel23978/readAOFM"</span><span class="op">)</span></span></code></pre></div>
-<p>After acceptance on CRAN, use:</p>
+<p>The package is awaiting its first CRAN acceptance. After acceptance, use:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"readAOFM"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="first-success-without-a-network-request">First success without a network request<a class="anchor" aria-label="anchor" href="#first-success-without-a-network-request"></a>
+<h2 id="discover-an-aofm-table">Discover an AOFM table<a class="anchor" aria-label="anchor" href="#discover-an-aofm-table"></a>
 </h2>
-<p><code><a href="reference/search_aofm.html">search_aofm()</a></code> searches the local table catalogue. Its default <code>read = FALSE</code> does not contact AOFM and returns ready-to-run calls.</p>
+<p>Start with the local catalogue to identify a supported table and obtain its ready-to-run selector. This discovery step is network-free.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"readAOFM"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">catalog</span> <span class="op">&lt;-</span> <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/search_aofm.html">search_aofm</a></span><span class="op">(</span><span class="st">"tb issuance"</span><span class="op">)</span></span>
-<span>  <span class="va">catalog</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"id"</span>, <span class="st">"read_call"</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="op">}</span></span>
+<code class="sourceCode R"><span><span class="va">catalog</span> <span class="op">&lt;-</span> <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/search_aofm.html">search_aofm</a></span><span class="op">(</span><span class="st">"tb issuance"</span><span class="op">)</span></span>
+<span><span class="va">catalog</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"id"</span>, <span class="st">"read_call"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;            id                   read_call</span></span>
 <span><span class="co">#&gt; 1 tb_issuance read_aofm("tb", "issuance")</span></span></code></pre></div>
 <p>The same helper accepts ordinary descriptions:</p>
@@ -81,40 +78,87 @@
 <span><span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/search_aofm.html">search_aofm</a></span><span class="op">(</span><span class="st">"secondary market"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="first-parsed-table-still-offline">First parsed table, still offline<a class="anchor" aria-label="anchor" href="#first-parsed-table-still-offline"></a>
+<h2 id="retrieve-and-chart-a-time-series">Retrieve and chart a time series<a class="anchor" aria-label="anchor" href="#retrieve-and-chart-a-time-series"></a>
 </h2>
-<p>The package ships a small official workbook snapshot for deterministic documentation and tests. This example replaces only the internal downloader; it still runs the public dispatcher and transactional parser, without making a network request.</p>
+<p>The catalogue result points to the public retrieval call below. It downloads the current Treasury Bond issuance workbook over HTTPS and runs the package’s transactional parser:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fixture</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"tb_issuance.xlsx"</span>, package <span class="op">=</span> <span class="st">"readAOFM"</span><span class="op">)</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"testthat"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="fu"><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nzchar</a></span><span class="op">(</span><span class="va">fixture</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">tb_issuance</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">suppressMessages</a></span><span class="op">(</span><span class="fu">testthat</span><span class="fu">::</span><span class="fu"><a href="https://testthat.r-lib.org/reference/local_mocked_bindings.html" class="external-link">with_mocked_bindings</a></span><span class="op">(</span></span>
-<span>    <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/read_aofm.html">read_aofm</a></span><span class="op">(</span><span class="st">"tb"</span>, <span class="st">"issuance"</span><span class="op">)</span>,</span>
-<span>    download_aofm_table_workbook <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="va">fixture</span>,</span>
-<span>    .package <span class="op">=</span> <span class="st">"readAOFM"</span></span>
-<span>  <span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>    rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">tb_issuance</span><span class="op">)</span>,</span>
-<span>    columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">tb_issuance</span><span class="op">)</span>,</span>
-<span>    first_tender <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">tb_issuance</span><span class="op">$</span><span class="va">date_held</span><span class="op">)</span>,</span>
-<span>    latest_tender_in_snapshot <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">tb_issuance</span><span class="op">$</span><span class="va">date_held</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span><span class="co">#&gt;    rows columns first_tender latest_tender_in_snapshot</span></span>
-<span><span class="co">#&gt; 1 26268       7   1982-08-05                2025-05-27</span></span></code></pre></div>
-<p>Packaged snapshots are examples, not a runtime cache or a substitute for the current AOFM source. Normal reads fetch the live workbook as shown next.</p>
-</div>
-<div class="section level2">
-<h2 id="read-a-live-table">Read a live table<a class="anchor" aria-label="anchor" href="#read-a-live-table"></a>
-</h2>
-<p>Readers fetch the current workbook from AOFM. This live example is guarded so that it runs when copied into an interactive R session but never makes a network request while the README is built or during CRAN checks.</p>
+<code class="sourceCode R"><span><span class="va">tb_issuance</span> <span class="op">&lt;-</span> <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/read_aofm.html">read_aofm</a></span><span class="op">(</span><span class="st">"tb"</span>, <span class="st">"issuance"</span><span class="op">)</span></span></code></pre></div>
+<p>For a deterministic README and CRAN build, the rendered output below runs that same public dispatcher and parser against the installed <code>tb_issuance.xlsx</code> snapshot. The snapshot is an official AOFM workbook from <a href="https://www.aofm.gov.au/media/591" class="external-link">AOFM media/591</a>; its SHA-256 and provenance are recorded with the <a href="https://github.com/joel23978/readAOFM/blob/main/inst/extdata/README.md" class="external-link">packaged snapshots</a>. A normal user call uses the current live workbook instead.</p>
+<p>The parsed table is long-form: <code>date_held</code> and <code>maturity</code> are <code>Date</code> columns, <code>name</code> identifies the measure, and numeric observations are in <code>value</code>. This base-R filter selects bids and allotments for a long-running bond maturity and expresses the source values in A$ billions.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">x</span> <span class="op">&lt;-</span> <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/read_aofm.html">read_aofm</a></span><span class="op">(</span><span class="st">"tb"</span>, <span class="st">"issuance"</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">is.data.frame</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"name"</span>, <span class="st">"value"</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="fu">utils</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">x</span>, <span class="fl">3</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">measure_labels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>  amount_allotted <span class="op">=</span> <span class="st">"Amount allotted"</span>,</span>
+<span>  amount_of_bids <span class="op">=</span> <span class="st">"Bids received"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">tender_series</span> <span class="op">&lt;-</span> <span class="va">tb_issuance</span><span class="op">[</span></span>
+<span>  <span class="va">tb_issuance</span><span class="op">$</span><span class="va">maturity</span> <span class="op">==</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2029-04-21"</span><span class="op">)</span> <span class="op">&amp;</span></span>
+<span>    <span class="va">tb_issuance</span><span class="op">$</span><span class="va">name</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">measure_labels</span><span class="op">)</span> <span class="op">&amp;</span></span>
+<span>    <span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">tb_issuance</span><span class="op">$</span><span class="va">value</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"date_held"</span>, <span class="st">"maturity"</span>, <span class="st">"name"</span>, <span class="st">"value"</span><span class="op">)</span></span>
+<span><span class="op">]</span></span>
+<span></span>
+<span><span class="va">tender_series</span><span class="op">$</span><span class="va">measure</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span></span>
+<span>  <span class="va">tender_series</span><span class="op">$</span><span class="va">name</span>,</span>
+<span>  levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">measure_labels</span><span class="op">)</span>,</span>
+<span>  labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">measure_labels</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">tender_series</span><span class="op">$</span><span class="va">value_billions</span> <span class="op">&lt;-</span> <span class="va">tender_series</span><span class="op">$</span><span class="va">value</span> <span class="op">/</span> <span class="fl">1e9</span></span>
+<span><span class="va">tender_series</span> <span class="op">&lt;-</span> <span class="va">tender_series</span><span class="op">[</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">tender_series</span><span class="op">$</span><span class="va">measure</span>, <span class="va">tender_series</span><span class="op">$</span><span class="va">date_held</span><span class="op">)</span>,</span>
+<span>  ,</span>
+<span>  drop <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">]</span></span>
+<span></span>
+<span><span class="va">series_preview</span> <span class="op">&lt;-</span> <span class="fu">utils</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">tender_series</span>, <span class="fl">4</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  date_held <span class="op">=</span> <span class="va">series_preview</span><span class="op">$</span><span class="va">date_held</span>,</span>
+<span>  measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">series_preview</span><span class="op">$</span><span class="va">measure</span><span class="op">)</span>,</span>
+<span>  value_billions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%.2f"</span>, <span class="va">series_preview</span><span class="op">$</span><span class="va">value_billions</span><span class="op">)</span>,</span>
+<span>  stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;    date_held         measure value_billions</span></span>
+<span><span class="co">#&gt; 1 2012-10-10 Amount allotted           3.26</span></span>
+<span><span class="co">#&gt; 2 2013-04-10 Amount allotted           0.64</span></span>
+<span><span class="co">#&gt; 3 2013-05-08 Amount allotted           0.60</span></span>
+<span><span class="co">#&gt; 4 2013-06-19 Amount allotted           0.70</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"ggplot2"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">tender_plot</span> <span class="op">&lt;-</span> <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span></span>
+<span>    <span class="va">tender_series</span>,</span>
+<span>    <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span></span>
+<span>      x <span class="op">=</span> <span class="va">date_held</span>,</span>
+<span>      y <span class="op">=</span> <span class="va">value_billions</span>,</span>
+<span>      colour <span class="op">=</span> <span class="va">measure</span>,</span>
+<span>      group <span class="op">=</span> <span class="va">measure</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>linewidth <span class="op">=</span> <span class="fl">0.75</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">1.25</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_manual.html" class="external-link">scale_colour_manual</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"#0072B2"</span>, <span class="st">"#D55E00"</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
+<span>      title <span class="op">=</span> <span class="st">"Treasury Bond tender bids and allotments"</span>,</span>
+<span>      subtitle <span class="op">=</span> <span class="st">"21 April 2029 maturity, packaged AOFM snapshot"</span>,</span>
+<span>      x <span class="op">=</span> <span class="st">"Tender date"</span>,</span>
+<span>      y <span class="op">=</span> <span class="st">"A$ billions"</span>,</span>
+<span>      colour <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>      caption <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>        <span class="st">"Source: Australian Office of Financial Management (AOFM),"</span>,</span>
+<span>        <span class="st">"Data Hub."</span></span>
+<span>      <span class="op">)</span></span>
+<span>    <span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">11</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span></span>
+<span>      legend.position <span class="op">=</span> <span class="st">"bottom"</span>,</span>
+<span>      legend.justification <span class="op">=</span> <span class="st">"left"</span>,</span>
+<span>      panel.grid.minor <span class="op">=</span> <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_blank</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>      plot.caption <span class="op">=</span> <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>hjust <span class="op">=</span> <span class="fl">0</span>, size <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span>
+<span>    <span class="op">)</span></span>
+<span></span>
+<span>  <span class="va">tender_plot</span></span>
 <span><span class="op">}</span></span></code></pre></div>
-<p><code><a href="reference/read_aofm.html">read_aofm()</a></code> returns one parsed object for one match and a named list when selectors match several tables. The default call selects all parsed tables and can download a substantial amount of data, so start with a specific pair.</p>
+<p><img src="reference/figures/retrieve-chart-1.png" alt="Line chart of bids received and amounts allotted at Australian Treasury Bond tenders for the 21 April 2029 maturity, from 2012 to 2025."></p>
+<p>The <a href="https://github.com/joel23978/readAOFM/blob/main/vignettes/getting-started.Rmd" class="external-link">Getting Started article</a> expands this workflow and explains the return contract. <code><a href="reference/read_aofm.html">read_aofm()</a></code> returns one parsed object for a single match and a named list when selectors match several tables. Start with a specific pair before requesting a whole family.</p>
 </div>
 <div class="section level2">
 <h2 id="supported-aofm-data">Supported AOFM data<a class="anchor" aria-label="anchor" href="#supported-aofm-data"></a>
@@ -186,28 +230,27 @@
 </tr>
 </tbody>
 </table>
-<p>Seven catalogue entries have no parser in this version and are raw-download-only metadata: <code>tb_issuance_conversion</code>, <code>indexation_factors</code>, <code>rmbs_transactions</code>, <code>rmbs_auctions</code>, <code>interest_rate_swaps</code>, <code>cross_currency_swaps</code>, and <code>portfolio_overview</code>. They are excluded from the supported catalogue searched by <code><a href="reference/search_aofm.html">search_aofm()</a></code>; because that function falls back to token matching, a raw-only ID can still coincidentally match a supported row. Only IDs in the returned rows are readable. The raw-only entries’ selector fields are empty, so they cannot be requested individually; the current raw helper includes them only when <code><a href="reference/download_aofm_xlsx.html">download_aofm_xlsx()</a></code> is called without either selector, which also downloads every other catalogue workbook.</p>
 </div>
 <div class="section level2">
 <h2 id="common-workflows">Common workflows<a class="anchor" aria-label="anchor" href="#common-workflows"></a>
 </h2>
 <p>Select one table or one ownership slice:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tb_issuance</span> <span class="op">&lt;-</span> <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/read_aofm.html">read_aofm</a></span><span class="op">(</span><span class="st">"tb"</span>, <span class="st">"issuance"</span><span class="op">)</span></span>
 <span><span class="va">ownership</span> <span class="op">&lt;-</span> <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/read_aofm.html">read_aofm</a></span><span class="op">(</span><span class="st">"ownership"</span>, <span class="st">"nonresident"</span><span class="op">)</span></span></code></pre></div>
 <p>Omitting <code>type</code> returns all parsed tables for a security. Omitting <code>security</code> and specifying <code>type</code> returns all matching securities. These calls are live downloads:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tb_tables</span> <span class="op">&lt;-</span> <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/read_aofm.html">read_aofm</a></span><span class="op">(</span><span class="st">"tb"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">tb_tables</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">issuance_tables</span> <span class="op">&lt;-</span> <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/read_aofm.html">read_aofm</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"issuance"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">issuance_tables</span><span class="op">)</span></span></code></pre></div>
 <p>Use the local catalogue before downloading:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/search_aofm.html">search_aofm</a></span><span class="op">(</span><span class="st">"issuance"</span><span class="op">)</span></span>
 <span><span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/search_aofm.html">search_aofm</a></span><span class="op">(</span><span class="st">"treasury bond"</span><span class="op">)</span></span></code></pre></div>
 <p>Most parsed frames are long, retain source identifiers, and expose <code>name</code> and <code>value</code> measurement columns. Dates handled by a reader are returned as <code>Date</code> objects. Inspect the actual workbook-derived columns before writing analysis code:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">tb_issuance</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">tb_issuance</span><span class="op">)</span></span></code></pre></div>
 <p>EOM and ownership readers return named lists; inspect both levels with <code>names(result)</code> and <code>names(result[[1]])</code>.</p>
@@ -215,7 +258,7 @@
 <h3 id="csv-and-raw-workbook-output">CSV and raw workbook output<a class="anchor" aria-label="anchor" href="#csv-and-raw-workbook-output"></a>
 </h3>
 <p><code>csv = TRUE</code> keeps returning the parsed object and additionally writes under <code>output/</code> relative to the current working directory. The <code><a href="reference/download_aofm_xlsx.html">download_aofm_xlsx()</a></code> helper saves raw workbooks under <code>data/</code> and prints selected table IDs.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Run in a project directory where writing is intentional:</span></span>
 <span><span class="co"># x &lt;- readAOFM::read_aofm("tb", "issuance", csv = TRUE)</span></span>
 <span><span class="co"># file.exists(file.path("output", "tb_issuance.csv"))</span></span>
@@ -226,24 +269,25 @@
 </div>
 </div>
 <div class="section level2">
-<h2 id="network-credentials-and-cache-behavior">Network, credentials, and cache behavior<a class="anchor" aria-label="anchor" href="#network-credentials-and-cache-behavior"></a>
+<h2 id="retrieval-and-reproducibility">Retrieval and reproducibility<a class="anchor" aria-label="anchor" href="#retrieval-and-reproducibility"></a>
 </h2>
 <ul>
 <li>
 <code>search_aofm(query)</code> with <code>read = FALSE</code> is local and network-free.</li>
 <li>Readers and <code>search_aofm(..., read = TRUE)</code> fetch public AOFM workbooks over HTTPS.</li>
 <li>Downloads use a 15-second connection timeout, a 120-second transfer limit, a low-speed abort after 30 seconds below 1 KiB/s, and a 100 MiB file limit.</li>
-<li>No AOFM username, password, API key, or other credential is required or collected.</li>
-<li>Readers use a temporary workbook for parsing and do not provide a persistent download cache. Repeating a read can fetch a newer workbook.</li>
+<li>Public AOFM workbooks are available without a package username, password, or API key.</li>
+<li>Readers stage each workbook in a temporary file and fetch the current source on each call; repeating a read can therefore return a newer workbook.</li>
 <li>
 <code>csv = TRUE</code> writes to <code>output/</code> and <code><a href="reference/download_aofm_xlsx.html">download_aofm_xlsx()</a></code> writes to <code>data/</code> relative to the current working directory.</li>
 </ul>
 </div>
 <div class="section level2">
-<h2 id="limitations-and-troubleshooting">Limitations and troubleshooting<a class="anchor" aria-label="anchor" href="#limitations-and-troubleshooting"></a>
+<h2 id="scope-and-limitations">Scope and limitations<a class="anchor" aria-label="anchor" href="#scope-and-limitations"></a>
 </h2>
+<p>The parser-supported catalogue contains the 23 tables listed above. Seven additional catalogue entries are available only through raw workbook download: <code>tb_issuance_conversion</code>, <code>indexation_factors</code>, <code>rmbs_transactions</code>, <code>rmbs_auctions</code>, <code>interest_rate_swaps</code>, <code>cross_currency_swaps</code>, and <code>portfolio_overview</code>. Their selector fields are empty, so an unfiltered <code><a href="reference/download_aofm_xlsx.html">download_aofm_xlsx()</a></code> call is the available route and also selects the rest of the catalogue. <code><a href="reference/search_aofm.html">search_aofm()</a></code> excludes these entries from its supported rows; its fallback token matching can still return a supported row for a query that contains a raw-only ID, so use the IDs shown in the returned result.</p>
 <p>AOFM controls the source URLs and workbook layouts. Changed URLs, an HTML error page, network failure, or changed sheets/columns can make a read fail. The package validates HTTP responses, workbook signatures, sheet counts, and required columns and reports the table context.</p>
-<p>The package does not parse the seven raw-only IDs above, does not accept a local workbook path through public readers, and does not promise identical identifier columns across source families. It is not a versioned data snapshot.</p>
+<p>Public readers focus on catalogue-selected AOFM sources; they do not accept a local workbook path. Identifier columns follow each workbook family and can differ across sources. Live reads represent the current AOFM workbook rather than a versioned data snapshot, while the five packaged snapshots provide fixed inputs for documentation and tests.</p>
 <table class="table">
 <colgroup>
 <col width="50%">
@@ -281,7 +325,7 @@
 <div class="section level2">
 <h2 id="citation-licensing-and-attribution">Citation, licensing, and attribution<a class="anchor" aria-label="anchor" href="#citation-licensing-and-attribution"></a>
 </h2>
-<p>Package source code is released under the MIT license; see <a href="https://github.com/joel23978/readAOFM/blob/main/LICENSE" class="external-link"><code>LICENSE</code></a>. Use <code>citation("readAOFM")</code> for the package citation.</p>
+<p>Package source code is released under the MIT license; see <a href="https://github.com/joel23978/readAOFM/blob/main/LICENSE" class="external-link"><code>LICENSE</code></a>. Use <code>citation("readAOFM")</code> for the package citation. The package author and maintainer is Joel F.</p>
 <p>Data are sourced from the AOFM Data Hub. Follow the AOFM’s current <a href="https://www.aofm.gov.au/copyright" class="external-link">copyright and licence terms</a>, including attribution requirements and exclusions for third-party material. Identify the Australian Office of Financial Management and the AOFM Data Hub in downstream work and do not imply AOFM endorsement. <code>readAOFM</code> is independent and is not affiliated with or endorsed by AOFM.</p>
 </div>
 <div class="section level2">
@@ -327,7 +371,7 @@
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>Joel Findlay <br><small class="roles"> Author, maintainer, copyright holder </small>   </li>
+<li>Joel F <br><small class="roles"> Author, maintainer, copyright holder </small>   </li>
 </ul>
 </div>
 
@@ -338,7 +382,7 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Joel Findlay.</p>
+  <p>Developed by Joel F.</p>
 </div>
 
 <div class="pkgdown-footer-right">

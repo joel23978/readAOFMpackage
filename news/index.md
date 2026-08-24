@@ -2,8 +2,8 @@
 
 ## readAOFM 0.1.0
 
-This release prepares readAOFM for an initial CRAN submission. It is not
-a statement that the package has been accepted by CRAN.
+This release prepares readAOFM for an initial CRAN submission. CRAN
+acceptance remains pending.
 
 - Documented the package’s ten exported functions, including their
   return shapes, errors, network requirements, and opt-in file-writing
@@ -11,6 +11,11 @@ a statement that the package has been accepted by CRAN.
 - Added a task-oriented path from offline catalogue search to a selected
   live AOFM workbook and clarified the supported source families and
   raw-only catalogue entries.
+- Added a deterministic end-to-end example that retrieves Treasury Bond
+  issuance through the public API and charts bids and allotments from a
+  provenance-documented official snapshot.
+- Standardized the package author, maintainer, and copyright-holder
+  display as Joel F across package and repository metadata.
 - Added deterministic, fixture-backed documentation and examples for the
   workbook readers, together with troubleshooting guidance for changed
   source URLs and layouts.

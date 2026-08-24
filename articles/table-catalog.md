@@ -1,10 +1,11 @@
 # Table catalog and data sources
 
-`readAOFM` maintains a local catalogue of the AOFM Data Hub workbooks.
-The catalogue is used for selector matching and search; it is not a
-downloaded data cache. This article records the 23 entries with parsers
-and the seven historical entries that can currently be downloaded only
-as raw workbooks.
+`readAOFM` ships a local catalogue that maps AOFM Data Hub workbooks to
+search terms, public selectors, and parser families. This article
+records the 23 parser-supported entries and the seven historical entries
+available through raw workbook download. Reader calls retrieve current
+source workbooks; the catalogue itself supplies stable discovery
+metadata.
 
 ## The 23 parsed tables
 
@@ -161,9 +162,11 @@ readAOFM::search_aofm("secondary market")[, c("id", "read_call")]
 #> 2 tib_turnover read_aofm("tib", "turnover")
 ```
 
-## Seven raw-download-only entries
+## Raw-workbook catalogue entries
 
-The following catalogue IDs currently have no parser:
+The following seven catalogue IDs are available through the raw workbook
+download path while the parser-supported workflow focuses on the 23
+entries above:
 
 ``` r
 
@@ -213,16 +216,16 @@ catalogue workbooks. The function writes files beneath `data/` in the
 working directory and performs a live HTTPS request, so this article
 does not run it automatically.
 
-## Source, authentication, and limitations
+## Source access and scope
 
-The source is the public AOFM Data Hub. No AOFM username, password, API
-key, or other credential is needed.
+The public AOFM Data Hub provides these workbooks without a package
+username, password, or API key.
 [`search_aofm()`](https://joel23978.github.io/readAOFM/reference/search_aofm.md)
-is fully offline. Reader and raw download calls request the workbook URL
-recorded in the package catalogue over HTTPS, stage it in a temporary
-file (readers), or save it beneath `data/` (raw downloads); a recorded
-URL may be unavailable or changed, and the package does not expose a
-persistent download cache.
+performs local discovery. Reader and raw download calls request the
+workbook URL recorded in the package catalogue over HTTPS, stage it in a
+temporary file (readers), or save it beneath `data/` (raw downloads).
+Each call retrieves the current source rather than using a persistent
+package cache.
 
 AOFM controls workbook URLs, publication cadence, sheet names, columns,
 and historical coverage. For example, turnover is published quarterly

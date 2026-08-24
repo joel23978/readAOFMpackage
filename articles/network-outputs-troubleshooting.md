@@ -1,21 +1,22 @@
 # Network, outputs, and troubleshooting
 
-`readAOFM` has two kinds of I/O: readers fetch public AOFM Data Hub
-workbooks and optionally write parsed CSV files;
+`readAOFM` separates local catalogue discovery from workbook I/O.
+Readers fetch public AOFM Data Hub workbooks and can optionally write
+parsed CSV files, while
 [`search_aofm()`](https://joel23978.github.io/readAOFM/reference/search_aofm.md)
-is local and has no I/O. The examples below keep all writes in an
-isolated temporary directory and replace the network downloader with a
-packaged workbook snapshot.
+searches installed metadata. The examples below keep every write in an
+isolated temporary directory and use a packaged workbook snapshot for
+deterministic parsing.
 
 ## Network and staging behavior
 
 The reader path resolves a table from the local catalogue, requests its
 AOFM workbook over HTTPS, validates that the response looks like an
 Excel workbook, and stages the file in a temporary location for parsing.
-It does not require credentials and does not maintain a persistent
-package cache. Repeating a live read can therefore observe a newer AOFM
-workbook. Transport failures, HTTP errors, empty files, non-workbook
-responses, and changed source layouts are reported with table context.
+Public workbooks are available without package credentials, and each
+live read retrieves the current source. Transport failures, HTTP errors,
+empty files, non-workbook responses, and changed source layouts are
+reported with table context.
 
 Use the offline search before a live call:
 
@@ -107,7 +108,7 @@ intended.
 
 ## Common errors and recovery
 
-An invalid selector is detected locally and does not contact AOFM:
+Selector validation happens locally before any AOFM request:
 
 ``` r
 

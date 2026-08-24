@@ -59,11 +59,12 @@
 
     
     
-<p><code>readAOFM</code> maintains a local catalogue of the AOFM Data
-Hub workbooks. The catalogue is used for selector matching and search;
-it is not a downloaded data cache. This article records the 23 entries
-with parsers and the seven historical entries that can currently be
-downloaded only as raw workbooks.</p>
+<p><code>readAOFM</code> ships a local catalogue that maps AOFM Data Hub
+workbooks to search terms, public selectors, and parser families. This
+article records the 23 parser-supported entries and the seven historical
+entries available through raw workbook download. Reader calls retrieve
+current source workbooks; the catalogue itself supplies stable discovery
+metadata.</p>
 <div class="section level2">
 <h2 id="the-23-parsed-tables">The 23 parsed tables<a class="anchor" aria-label="anchor" href="#the-23-parsed-tables"></a>
 </h2>
@@ -213,9 +214,11 @@ calls are local and return metadata only because
 <span><span class="co">#&gt; 2 tib_turnover read_aofm("tib", "turnover")</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="seven-raw-download-only-entries">Seven raw-download-only entries<a class="anchor" aria-label="anchor" href="#seven-raw-download-only-entries"></a>
+<h2 id="raw-workbook-catalogue-entries">Raw-workbook catalogue entries<a class="anchor" aria-label="anchor" href="#raw-workbook-catalogue-entries"></a>
 </h2>
-<p>The following catalogue IDs currently have no parser:</p>
+<p>The following seven catalogue IDs are available through the raw
+workbook download path while the parser-supported workflow focuses on
+the 23 entries above:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">raw_only_ids</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  <span class="st">"tb_issuance_conversion"</span>,</span>
@@ -260,15 +263,15 @@ beneath <code>data/</code> in the working directory and performs a live
 HTTPS request, so this article does not run it automatically.</p>
 </div>
 <div class="section level2">
-<h2 id="source-authentication-and-limitations">Source, authentication, and limitations<a class="anchor" aria-label="anchor" href="#source-authentication-and-limitations"></a>
+<h2 id="source-access-and-scope">Source access and scope<a class="anchor" aria-label="anchor" href="#source-access-and-scope"></a>
 </h2>
-<p>The source is the public AOFM Data Hub. No AOFM username, password,
-API key, or other credential is needed. <code><a href="../reference/search_aofm.html">search_aofm()</a></code> is
-fully offline. Reader and raw download calls request the workbook URL
+<p>The public AOFM Data Hub provides these workbooks without a package
+username, password, or API key. <code><a href="../reference/search_aofm.html">search_aofm()</a></code> performs
+local discovery. Reader and raw download calls request the workbook URL
 recorded in the package catalogue over HTTPS, stage it in a temporary
-file (readers), or save it beneath <code>data/</code> (raw downloads); a
-recorded URL may be unavailable or changed, and the package does not
-expose a persistent download cache.</p>
+file (readers), or save it beneath <code>data/</code> (raw downloads).
+Each call retrieves the current source rather than using a persistent
+package cache.</p>
 <p>AOFM controls workbook URLs, publication cadence, sheet names,
 columns, and historical coverage. For example, turnover is published
 quarterly with a reporting lag, while several raw-only datasets are
@@ -286,7 +289,7 @@ runtime cache.</p>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Joel Findlay.</p>
+  <p>Developed by Joel F.</p>
 </div>
 
 <div class="pkgdown-footer-right">
