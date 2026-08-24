@@ -17,6 +17,16 @@ download date was not recorded.
 | `tib_issuance.xlsx` | <https://www.aofm.gov.au/media/429> | `bbd545880fc522dec2bf2e011e1846124706aec891e463654c5d458e42536c5d` |
 | `tib_syndication.xlsx` | <https://www.aofm.gov.au/media/631> | `f0676f18700d787c8f8c8d3486bf6528453df23db6350f8359c2aafc982eaf77` |
 
+## Documentation chart
+
+The README and Getting Started chart is rendered from `tb_issuance.xlsx`
+through the public `read_aofm("tb", "issuance")` dispatcher and its production
+parser, with this installed snapshot substituted only at the HTTPS transport
+boundary during documentation builds. It selects `amount_allotted` and
+`amount_of_bids` for the 21 April 2029 maturity, uses the source `date_held`,
+`name`, and `value` columns, and converts the dollar observations to A$
+billions. The README image under `man/figures/` is generated from that code.
+
 ## Attribution and terms
 
 Please attribute the source as **Australian Office of Financial Management

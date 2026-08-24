@@ -3,7 +3,7 @@
 ## readAOFM code and documentation
 
 Unless a more specific notice applies below, the readAOFM package source code
-and documentation are copyright © 2023–2026 Joel Findlay and are released
+and documentation are copyright © 2023–2026 Joel F and are released
 under the MIT License in `LICENSE`.
 
 The MIT notice applies to the package's own code and documentation. It does
@@ -37,6 +37,12 @@ The five packaged snapshots and their source URLs are:
 
 These AOFM workbooks and source records are not relicensed under the
 readAOFM MIT licence.
+
+The rendered Treasury Bond chart in `man/figures/` is derived from
+`tb_issuance.xlsx`. Its source caption attributes the Australian Office of
+Financial Management and the AOFM Data Hub. The underlying observations remain
+Commonwealth material under the terms and exclusions described above; the
+generated visualisation does not imply AOFM endorsement.
 
 ## Adapted Stack Overflow snippets
 

@@ -7,7 +7,7 @@ template:
 
 home:
   title: readAOFM
-  description: Download, search, and read AOFM Data Hub tables in R.
+  description: Discover, retrieve, and parse AOFM Data Hub time series in R.
   links:
   - text: AOFM Data Hub
     href: https://www.aofm.gov.au/data-hub
