@@ -1,13 +1,22 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://joel23978.github.io/readAOFM/404.html</loc></url>
+<url><loc>https://joel23978.github.io/readAOFM/CONTRIBUTING.html</loc></url>
 <url><loc>https://joel23978.github.io/readAOFM/LICENSE-text.html</loc></url>
+<url><loc>https://joel23978.github.io/readAOFM/SECURITY.html</loc></url>
+<url><loc>https://joel23978.github.io/readAOFM/SUPPORT.html</loc></url>
+<url><loc>https://joel23978.github.io/readAOFM/articles/getting-started.html</loc></url>
+<url><loc>https://joel23978.github.io/readAOFM/articles/index.html</loc></url>
+<url><loc>https://joel23978.github.io/readAOFM/articles/network-outputs-troubleshooting.html</loc></url>
+<url><loc>https://joel23978.github.io/readAOFM/articles/table-catalog.html</loc></url>
 <url><loc>https://joel23978.github.io/readAOFM/authors.html</loc></url>
 <url><loc>https://joel23978.github.io/readAOFM/index.html</loc></url>
+<url><loc>https://joel23978.github.io/readAOFM/news/index.html</loc></url>
 <url><loc>https://joel23978.github.io/readAOFM/reference/browse_tables.html</loc></url>
 <url><loc>https://joel23978.github.io/readAOFM/reference/download_aofm_xlsx.html</loc></url>
 <url><loc>https://joel23978.github.io/readAOFM/reference/find_file.html</loc></url>
 <url><loc>https://joel23978.github.io/readAOFM/reference/index.html</loc></url>
 <url><loc>https://joel23978.github.io/readAOFM/reference/not_all_na.html</loc></url>
+<url><loc>https://joel23978.github.io/readAOFM/reference/readAOFM-package.html</loc></url>
 <url><loc>https://joel23978.github.io/readAOFM/reference/read_aofm.html</loc></url>
 <url><loc>https://joel23978.github.io/readAOFM/reference/read_eofy.html</loc></url>
 <url><loc>https://joel23978.github.io/readAOFM/reference/read_eom.html</loc></url>

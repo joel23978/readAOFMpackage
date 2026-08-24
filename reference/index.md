@@ -1,49 +1,39 @@
 # Package index
 
-## Main Interface
+## Start here
 
+- [`readAOFM-package`](https://joel23978.github.io/readAOFM/reference/readAOFM-package.md)
+  [`readAOFM`](https://joel23978.github.io/readAOFM/reference/readAOFM-package.md)
+  : Read AOFM Data Hub workbooks in R
 - [`read_aofm()`](https://joel23978.github.io/readAOFM/reference/read_aofm.md)
-  : Reads in and cleans any data from the AOFM, returns cleaned in a
-  long format
+  : Read and tidy one or more AOFM Data Hub tables
 - [`search_aofm()`](https://joel23978.github.io/readAOFM/reference/search_aofm.md)
-  : Search the supported AOFM table catalog
-- [`download_aofm_xlsx()`](https://joel23978.github.io/readAOFM/reference/download_aofm_xlsx.md)
-  : Download xlsx.xls files from AOFM DataHub
+  : Search the supported AOFM table catalogue
 
-## Table Readers
+## Download raw workbooks
+
+- [`download_aofm_xlsx()`](https://joel23978.github.io/readAOFM/reference/download_aofm_xlsx.md)
+  : Download raw AOFM Data Hub workbooks
+
+## Positions and holdings
 
 - [`read_eofy()`](https://joel23978.github.io/readAOFM/reference/read_eofy.md)
-  : Reads in and cleans the EOFY Positions - Executive Summary data from
-  the AOFM, returns cleaned in a long format
+  : Read the AOFM end-of-financial-year executive summary
 - [`read_eom()`](https://joel23978.github.io/readAOFM/reference/read_eom.md)
-  : Reads in and cleans the "End of Month Positions" data from the AOFM,
-  returns a list
+  : Read an AOFM end-of-month positions workbook
+
+## Transactions and market activity
+
 - [`read_transactional()`](https://joel23978.github.io/readAOFM/reference/read_transactional.md)
-  : Reads in and cleans data under "Transaction Details" from the AOFM,
-  returns cleaned in a long format (excl. issunace via conversion and
-  syndication details)
+  : Read a transactional AOFM workbook
 - [`read_syndication()`](https://joel23978.github.io/readAOFM/reference/read_syndication.md)
-  : Reads in and cleans Syndication details data under "Transaction
-  Details" from the AOFM, returns cleaned in a long format
-- [`read_ownership()`](https://joel23978.github.io/readAOFM/reference/read_ownership.md)
-  : Reads in and cleans data under "Ownership of Australia Government
-  Securities" from the AOFM, returns cleaned in a long format
+  : Read AOFM syndication details
 - [`read_secondary()`](https://joel23978.github.io/readAOFM/reference/read_secondary.md)
-  : Reads in and cleans data under "AGS Secondary Market Turnover" from
-  the AOFM, returns cleaned in a long format
+  : Read AOFM secondary-market turnover
+
+## Ownership and term premium
+
+- [`read_ownership()`](https://joel23978.github.io/readAOFM/reference/read_ownership.md)
+  : Read AOFM ownership of Australian Government Securities
 - [`read_premium()`](https://joel23978.github.io/readAOFM/reference/read_premium.md)
-  : Reads in and cleans data under "Term Premium Estimates" from the
-  AOFM, returns cleaned in a long format
-
-## Helpers
-
-- [`find_file()`](https://joel23978.github.io/readAOFM/reference/find_file.md)
-  : Find name of file to download from AOFM
-- [`browse_tables()`](https://joel23978.github.io/readAOFM/reference/browse_tables.md)
-  : Show index of tables from the AOFM website
-- [`read_excel_allsheets()`](https://joel23978.github.io/readAOFM/reference/read_excel_allsheets.md)
-  : Read multiple excel sheet to a list object, cc Ralf Stubner on
-  StackOverflow
-- [`not_all_na()`](https://joel23978.github.io/readAOFM/reference/not_all_na.md)
-  : Select columns which dont have all NA values, cc zack on
-  StackOverflow
+  : Read AOFM term-premium estimates

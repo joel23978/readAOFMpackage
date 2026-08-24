@@ -1,6 +1,10 @@
-# Show index of tables from the AOFM website
+# Print the internal AOFM table index
 
-Show index of tables from the AOFM website
+This is an internal helper used while developing and testing the
+package. It prints `x` and returns it invisibly; it does not download
+data or query the AOFM website. The public, user-facing catalogue search
+is
+[`search_aofm()`](https://joel23978.github.io/readAOFM/reference/search_aofm.md).
 
 ## Usage
 
@@ -12,16 +16,9 @@ browse_tables(x = aofm_index_nav)
 
 - x:
 
-  object you want data on, options include: tb, tib, tn, slf, summary,
-  aggregate, ownership, retail, termpremium
+  An object to print. The default is the package's internal table index
+  used to map `security` and `type` arguments to source workbooks.
 
 ## Value
 
-dataframe with index of files and arguments to download them
-
-## Examples
-
-``` r
-if (FALSE) download_aofm_xlsx() # \dontrun{}
-# return dataframe with list of files/arguments
-```
+`x`, invisibly.

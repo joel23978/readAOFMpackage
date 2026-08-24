@@ -1,6 +1,7 @@
-# Select columns which dont have all NA values, cc zack on StackOverflow
+# Test whether an object contains at least one non-missing value
 
-Select columns which dont have all NA values, cc zack on StackOverflow
+This internal predicate is used to drop columns that are entirely `NA`
+while parsing transactional workbooks.
 
 ## Usage
 
@@ -12,8 +13,9 @@ not_all_na(x)
 
 - x:
 
-  dataframe object
+  An atomic vector, matrix, or data-frame column to inspect.
 
 ## Value
 
-columns which are not ONLY NA values
+A length-one logical value: `TRUE` when at least one element of `x` is
+not `NA`, otherwise `FALSE`.

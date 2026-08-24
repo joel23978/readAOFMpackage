@@ -1,6 +1,12 @@
-# Search the supported AOFM table catalog
+# Search the supported AOFM table catalogue
 
-Search the supported AOFM table catalog
+`search_aofm()` searches the package's local catalogue without
+downloading a workbook or contacting the AOFM website. Matching is
+case-insensitive and accepts stable IDs, security/type values, and
+useful aliases such as "treasury bond", "inflation", "foreign
+ownership", "turnover", and "term premium". Use the returned `read_call`
+column to pass a selected table to
+[`read_aofm()`](https://joel23978.github.io/readAOFM/reference/read_aofm.md).
 
 ## Usage
 
@@ -12,28 +18,56 @@ search_aofm(query, read = FALSE, csv = FALSE)
 
 - query:
 
-  Search string used to match supported AOFM tables
+  One non-empty search string. Phrases are preferred when they match;
+  otherwise all query tokens or any matching token are used.
 
 - read:
 
-  if `TRUE`, reads the matched tables via
-  [`read_aofm()`](https://joel23978.github.io/readAOFM/reference/read_aofm.md)
-  instead of returning the catalog rows
+  Logical scalar (default `FALSE`). If `FALSE`, return catalogue rows.
+  If `TRUE`, read each matching table and return the parsed result.
 
 - csv:
 
-  if `TRUE` and `read = TRUE`, also writes matched outputs to CSV via
+  Logical scalar (default `FALSE`). When `read = TRUE` and `csv = TRUE`,
+  pass the option to
   [`read_aofm()`](https://joel23978.github.io/readAOFM/reference/read_aofm.md)
+  so parsed CSVs are written below `output/` in the current working
+  directory. It has no effect when `read = FALSE`.
 
 ## Value
 
-A dataframe of supported table matches, or the result of
+When `read = FALSE`, a base data frame with columns `security`, `type`,
+`id`, `reader`, and `read_call`; rows are reset to consecutive integers
+and unsupported/raw-only catalogue rows are not included. A query with
+no match returns a zero-row data frame. When `read = TRUE`, a single
+parsed table is returned for one match, or a named list keyed by table
+ID for multiple matches. A no-match `read = TRUE` call throws an error
+before any download.
+
+## Details
+
+With `read = TRUE`, each match is immediately passed to
 [`read_aofm()`](https://joel23978.github.io/readAOFM/reference/read_aofm.md)
-when `read = TRUE`
+and therefore requires an HTTPS request for every selected workbook. The
+package does not require credentials and the reader does not keep a
+persistent cache.
+
+Invalid queries (non-character, length other than one, `NA`, or blank
+after trimming) throw an error. Search results are deterministic for a
+fixed catalogue, but parsed values and available source files depend on
+the live AOFM workbooks.
+
+## See also
+
+[`read_aofm()`](https://joel23978.github.io/readAOFM/reference/read_aofm.md)
+for downloading and parsing, and
+[`download_aofm_xlsx()`](https://joel23978.github.io/readAOFM/reference/download_aofm_xlsx.md)
+for saving raw workbooks.
 
 ## Examples
 
 ``` r
+# All of these searches are offline.
 search_aofm("tb issuance")
 #>   security     type          id             reader                   read_call
 #> 1       tb issuance tb_issuance read_transactional read_aofm("tb", "issuance")
@@ -76,5 +110,9 @@ search_aofm("inflation")
 #> 4  read_aofm("tib", "settlement")
 #> 5 read_aofm("tib", "syndication")
 #> 6    read_aofm("tib", "turnover")
-if (FALSE) search_aofm("tb issuance", read = TRUE) # \dontrun{}
+
+# Reading a match is opt-in and network-dependent; keep it interactive.
+if (interactive()) {
+  search_aofm("tb issuance", read = TRUE)
+}
 ```

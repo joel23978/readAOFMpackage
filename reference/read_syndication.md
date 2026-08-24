@@ -1,7 +1,11 @@
-# Reads in and cleans Syndication details data under "Transaction Details" from the AOFM, returns cleaned in a long format
+# Read AOFM syndication details
 
-Reads in and cleans Syndication details data under "Transaction Details"
-from the AOFM, returns cleaned in a long format
+`read_syndication()` reads the syndicated-issue workbooks for Treasury
+Bonds or Treasury Indexed Bonds. It downloads over HTTPS without
+credentials, stages the workbook in a temporary file, and combines the
+source sheets into a single long-form result. No persistent package
+cache is used; the package- wide bounded timeout and size safeguards are
+applied.
 
 ## Usage
 
@@ -13,19 +17,59 @@ read_syndication(aofm_table, csv = FALSE)
 
 - aofm_table:
 
-  object to download, typically called from read_aofm()
+  Either `tb_syndication` or `tib_syndication`. It is normally selected
+  through
+  [`read_aofm()`](https://joel23978.github.io/readAOFM/reference/read_aofm.md).
 
 - csv:
 
-  if `TRUE`, also writes the parsed output to `output/`
+  Logical scalar (default `FALSE`). If `TRUE`, write the parsed result
+  to `output/<aofm_table>.csv` beneath the current working directory.
 
 ## Value
 
-AOFM Transactional data as a dataframe
+A tibble/data frame with source identifier columns, `pricing_date` and
+`settlement_date` as `Date` values where present, a `type` identifying
+`new_bond` or `tap`, and long-form `name` and `value` columns. Exact
+source fields follow the current AOFM workbook.
+
+## Details
+
+Notes worksheets are excluded. Empty files, missing required date fields
+or value columns, and changed source layouts cause an error.
+
+## See also
+
+[`read_aofm()`](https://joel23978.github.io/readAOFM/reference/read_aofm.md)
+for the preferred interface and
+[`search_aofm()`](https://joel23978.github.io/readAOFM/reference/search_aofm.md)
+for offline catalogue discovery.
 
 ## Examples
 
 ``` r
-if (FALSE) read_transactional("tb_syndication") # \dontrun{}
-# downloads Treasury Bond Syndication details data from the AOFM, returns cleaned in a long format
+search_aofm("tb syndication")
+#>   security        type             id           reader
+#> 1       tb syndication tb_syndication read_syndication
+#>                        read_call
+#> 1 read_aofm("tb", "syndication")
+
+fixture <- system.file("extdata", "tb_syndication.xlsx", package = "readAOFM")
+if (requireNamespace("testthat", quietly = TRUE) && nzchar(fixture)) {
+  result <- suppressMessages(testthat::with_mocked_bindings(
+    read_syndication("tb_syndication"),
+    download_aofm_table_workbook = function(...) fixture,
+    .package = "readAOFM"
+  ))
+  head(result[c("pricing_date", "type", "name", "value")])
+}
+#> # A tibble: 6 × 4
+#>   pricing_date type     name                     value
+#>   <date>       <chr>    <chr>                    <chr>
+#> 1 2011-10-20   new_bond face_value_issued_m      3260 
+#> 2 2011-10-20   new_bond bids_at_clearing_price_m 3433 
+#> 3 2011-10-20   new_bond yield_percent            4.88 
+#> 4 2011-10-20   new_bond domestic                 81.3 
+#> 5 2011-10-20   new_bond offshore                 18.7 
+#> 6 2011-10-20   new_bond asia_ex_japan            7.4  
 ```

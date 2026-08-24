@@ -1,6 +1,13 @@
-# Find name of file to download from AOFM
+# Resolve internal AOFM table IDs from security and type arguments
 
-Find name of file to download from AOFM
+This internal helper performs a local lookup in the package catalogue.
+It does not download data or query the AOFM website. It is used by
+[`download_aofm_xlsx()`](https://joel23978.github.io/readAOFM/reference/download_aofm_xlsx.md);
+users should generally start with
+[`search_aofm()`](https://joel23978.github.io/readAOFM/reference/search_aofm.md)
+or
+[`read_aofm()`](https://joel23978.github.io/readAOFM/reference/read_aofm.md)
+instead.
 
 ## Usage
 
@@ -12,24 +19,19 @@ find_file(security = NULL, type = NULL)
 
 - security:
 
-  object you want data on, options include: tb, tib, tn, slf, summary,
-  aggregate, ownership, retail, termpremium
+  Optional exact security family. Supported values include `summary`,
+  `aggregate`, `tb`, `tib`, `tn`, `slf`, `ownership`, `retail`, and
+  `termpremium`.
 
 - type:
 
-  the specific type of data you want, occasionally optional: dealt,
-  settlement, issuance, syndication, buyback, turnover,
+  Optional exact table type. Supported values include `dealt`,
+  `settlement`, `issuance`, `syndication`, `buyback`, `turnover`,
+  `public`, and `nonresident`.
 
 ## Value
 
-a vector with the file/s which match the input params
-
-## Examples
-
-``` r
-if (FALSE) { # \dontrun{
-find_file("tb", "issuance")
-find_file("tb")
-find_file()
-} # }
-```
+A character vector of matching catalogue IDs. `NULL` is returned when
+there is no match. Multiple matches are printed and returned; the
+catalogue includes seven rows that have no parser and can therefore be
+downloaded only as raw workbooks.
