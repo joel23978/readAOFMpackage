@@ -177,7 +177,11 @@ aofm_acquire_lock <- function(path, timeout = 10) {
         length(owner_pid) == 1L &&
         !is.na(owner_pid) &&
         owner_pid > 0L
-      owner_alive <- if (owner_is_local) {
+      owner_alive <- if (owner_is_local && .Platform$OS.type == "windows") {
+        # tools::pskill() always calls TerminateProcess on Windows, including
+        # for signal 0. Fail closed instead of probing and killing the owner.
+        TRUE
+      } else if (owner_is_local) {
         tryCatch(
           isTRUE(tools::pskill(owner_pid, signal = 0L)),
           error = function(error) FALSE

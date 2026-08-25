@@ -11,7 +11,7 @@ Maintainer: Joel F
 
 ## R CMD check results
 
-The final 1,188,774-byte source tarball was built with `R CMD build`, installed
+The final 1,189,300-byte source tarball was built with `R CMD build`, installed
 into a clean isolated library, and checked with
 `R CMD check --as-cran --no-manual`.
 

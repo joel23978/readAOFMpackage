@@ -26,6 +26,8 @@
   provides a bounded, content-addressed cache under a caller-selected root
   (default `tempdir()`), with metadata, locking, and pruning; legacy readers
   continue to use temporary staging and explicit caller output paths.
+* Made same-host stale-lock handling fail closed on Windows, where base R's
+  process signal API cannot probe liveness without terminating the target.
 * Added backward-compatible `timeout`, `retries`, and `max_bytes` controls to
   public search, download, and reader calls, with documented bounds and
   defaults for live retrieval.

@@ -526,6 +526,10 @@ aofm_download_metadata <- function(path, metadata, cache_hit) {
 #' exposed. The managed cache is opt-in through this function; the legacy
 #' [download_aofm_xlsx()] and [read_aofm()] workflows retain their existing
 #' temporary staging and explicit `data/`/`output/` side effects.
+#' On Windows, an old same-host lock is conservatively treated as active
+#' because base R has no non-terminating process-liveness probe there; the
+#' caller receives the usual lock-timeout error instead of the package risking
+#' termination of the lock owner.
 #'
 #' Invalid table IDs, unsupported rows, unsafe paths or bounds, lock timeouts,
 #' HTTP/transport failures, non-workbook responses, oversized files, and
