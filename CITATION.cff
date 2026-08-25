@@ -6,7 +6,6 @@ version: 0.1.0
 authors:
   - given-names: Joel
     family-names: F
-    email: joel.findlay@gmail.com
 repository-code: "https://github.com/joel23978/readAOFM"
 url: "https://joel23978.github.io/readAOFM/"
 license: MIT

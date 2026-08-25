@@ -17,6 +17,7 @@
 #' update.
 #'
 #' @seealso [search_aofm()], [read_aofm()], and [download_aofm_xlsx()]
+#' @author Joel F
 #' @importFrom dplyr "%>%" filter pull select where
 #' @docType package
 #' @name readAOFM-package

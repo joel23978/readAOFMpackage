@@ -3,7 +3,7 @@
 This is the initial submission of readAOFM 0.1.0. The package has not yet
 been submitted to or accepted by CRAN.
 
-Maintainer: Joel F <joel.findlay@gmail.com>
+Maintainer: Joel F
 
 ## Test environment
 

@@ -2,7 +2,7 @@ Package: readAOFM
 Title: Read and Tidy Australian Office of Financial Management Data
 Version: 0.1.0
 Authors@R:
-    person(given = "Joel", family = "F", email = "joel.findlay@gmail.com",
+    person(given = "Joel", family = "F", email = "joel23978@users.noreply.github.com",
            role = c("aut", "cre", "cph"))
 Description: Downloads, imports, and tidies time-series workbooks published
     by the Australian Office of Financial Management (AOFM) Data Hub

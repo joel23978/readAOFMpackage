@@ -27,7 +27,6 @@ update.
 \code{\link[=search_aofm]{search_aofm()}}, \code{\link[=read_aofm]{read_aofm()}}, and \code{\link[=download_aofm_xlsx]{download_aofm_xlsx()}}
 }
 \author{
-\strong{Maintainer}: Joel F \email{joel.findlay@gmail.com} [copyright holder]
-
+Joel F
 }
 \keyword{package}
