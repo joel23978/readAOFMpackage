@@ -1,11 +1,12 @@
 # Security
 
 Please do not publish details of a suspected security vulnerability,
-exposed credential, or private-data issue in a public GitHub issue.
-Contact the maintainer at <joel.findlay@gmail.com> with a concise
-description, affected version or commit, reproduction steps, and the
-minimum material needed to investigate. Do not send live passwords or
-tokens.
+exposed credential, or private-data issue in a public GitHub issue. Use
+the [private security-advisory
+form](https://github.com/joel23978/readAOFM/security/advisories/new)
+with a concise description, affected version or commit, reproduction
+steps, and the minimum material needed to investigate. Do not send live
+passwords or tokens.
 
 For ordinary parser failures, changed AOFM workbooks, or documentation
 requests, use the public [issue

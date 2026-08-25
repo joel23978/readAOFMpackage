@@ -30,4 +30,4 @@ and
 
 ## Author
 
-**Maintainer**: Joel F <joel.findlay@gmail.com> \[copyright holder\]
+Joel F
