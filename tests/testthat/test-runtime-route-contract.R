@@ -419,13 +419,63 @@ test_that("non-turnover issuance fixture output retains the 0.1.0 identity", {
     .package = "readAOFM"
   )
   result <- suppressMessages(read_aofm("tb", "issuance"))
+
+  portable_column_hash <- function(column) {
+    bytes <- if (inherits(column, "Date")) {
+      writeBin(as.integer(column), raw(), size = 4L, endian = "little")
+    } else if (is.double(column)) {
+      writeBin(column, raw(), size = 8L, endian = "little")
+    } else if (is.integer(column)) {
+      writeBin(column, raw(), size = 4L, endian = "little")
+    } else {
+      values <- enc2utf8(as.character(column))
+      missing <- is.na(column)
+      values[missing] <- "<NA>"
+      values[!missing] <- paste0(
+        nchar(values[!missing], type = "bytes"),
+        ":",
+        values[!missing]
+      )
+      charToRaw(paste(values, collapse = "\n"))
+    }
+    digest::digest(bytes, algo = "sha256", serialize = FALSE)
+  }
+
   expect_identical(
-    digest::digest(
-      result,
-      algo = "sha256",
-      serialize = TRUE,
-      serializeVersion = 3
-    ),
-    "e169ddd250ca52b0a10c4b6a4d9818d6b54da28d3d327ee758f100896dba2ac2"
+    dim(result),
+    c(26268L, 7L)
+  )
+  expect_identical(
+    names(result),
+    c(
+      "date_held", "tender_number", "maturity", "isin", "date_settled",
+      "name", "value"
+    )
+  )
+  expect_identical(class(result), c("tbl_df", "tbl", "data.frame"))
+  expect_identical(row.names(result), as.character(seq_len(nrow(result))))
+  expect_identical(
+    vapply(result, function(column) paste(class(column), collapse = "/"), character(1)),
+    c(
+      date_held = "Date",
+      tender_number = "character",
+      maturity = "Date",
+      isin = "character",
+      date_settled = "Date",
+      name = "character",
+      value = "numeric"
+    )
+  )
+  expect_identical(
+    vapply(result, portable_column_hash, character(1)),
+    c(
+      date_held = "c32e1d2a7791d57e23597a9f6d210991bead1501887aef29bee4f3950cad9028",
+      tender_number = "0324606619650cd96f4e10bb8d225c1c55bf4bfa775069a5d98ec129ac6cd279",
+      maturity = "38b65f6f8b4ac56f29df8d02486a090334ca96c52184ffb72f50ace1221d4fa1",
+      isin = "51d57b68cd6e406cd46e3d228a0134cc61f0cb78b87f76fd12e25f12296378c4",
+      date_settled = "67830b37f3d392fa0545b4ccdcb47e79c6f5df555016d37e2a8104a3c89bef45",
+      name = "9a3a875ba421c6f33175257456ec80d132c4d4e5ae01c92949fd35118b9b1f83",
+      value = "afb95a1f065ae10c327c7968cc5558f7f23093849fb0e4d33b87d6b4d22c4b84"
+    )
   )
 })

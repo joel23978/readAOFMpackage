@@ -11,16 +11,14 @@ Maintainer: Joel F
 
 ## R CMD check results
 
-The final 1,187,694-byte source tarball was built with `R CMD build`, installed
+The final 1,188,446-byte source tarball was built with `R CMD build`, installed
 into a clean isolated library, and checked with
 `R CMD check --as-cran --no-manual`.
 
 * 0 ERRORs, 0 WARNINGs, 0 NOTEs (`Status: OK`)
-* testthat: 476 PASS, 0 FAIL, 0 WARN, 0 SKIP
+* testthat: 481 PASS, 0 FAIL, 0 WARN, 0 SKIP
 * examples, vignettes, vignette rebuild, installed files, dependencies, and
   future timestamps: OK
 
 The local check disabled CRAN's remote incoming network probe; package and
-documentation URL/site checks were run separately. The configured GitHub
-Actions matrix could not start because the repository owner's GitHub billing
-or spending limit was exhausted, so no remote platform result is claimed.
+documentation URL/site checks were run separately.
