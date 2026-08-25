@@ -234,18 +234,20 @@ test_that("content cache repairs corruption and serializes exact metadata", {
 
 test_that("cache confinement locks final hashes and pruning preserve ownership", {
   source <- fixture_path("tb_issuance.xlsx")
-  outside <- tempfile("aofm-outside-")
-  root <- tempfile("aofm-confined-")
-  dir.create(outside)
-  dir.create(file.path(root, ".readAOFM", "data"), recursive = TRUE)
-  expect_true(file.symlink(
-    outside,
-    file.path(root, ".readAOFM", "data", "tb_issuance")
-  ))
-  expect_error(
-    download_aofm_file("tb_issuance", root),
-    "escaped the requested root|symlink"
-  )
+  if (.Platform$OS.type != "windows") {
+    outside <- tempfile("aofm-outside-")
+    root <- tempfile("aofm-confined-")
+    dir.create(outside)
+    dir.create(file.path(root, ".readAOFM", "data"), recursive = TRUE)
+    expect_true(file.symlink(
+      outside,
+      file.path(root, ".readAOFM", "data", "tb_issuance")
+    ))
+    expect_error(
+      download_aofm_file("tb_issuance", root),
+      "escaped the requested root|symlink"
+    )
+  }
 
   lock_root <- tempfile("aofm-lock-")
   paths <- readAOFM:::aofm_cache_paths(lock_root, "tb_issuance")
@@ -325,42 +327,54 @@ test_that("cache confinement locks final hashes and pruning preserve ownership",
 })
 
 test_that("cache confinement has no symlink write or prune escape", {
-  root <- tempfile("aofm-root-link-")
-  outside <- tempfile("aofm-root-outside-")
-  dir.create(root)
-  dir.create(outside)
-  expect_true(file.symlink(outside, file.path(root, ".readAOFM")))
-  expect_error(
-    readAOFM:::aofm_cache_paths(root, "tb_issuance"),
-    "escaped|symlink"
-  )
-  expect_false(dir.exists(file.path(outside, "data")))
+  # Directory symlinks become reparse points on Windows. Hosted Windows R
+  # cannot reliably remove those test-only links and can terminate during
+  # tempdir cleanup, so the same guard is exercised on Unix-alike CI hosts.
+  if (.Platform$OS.type == "windows") {
+    root <- tempfile("aofm-root-escape-")
+    dir.create(root)
+    expect_error(
+      readAOFM:::aofm_ensure_cache_directory(root, ".."),
+      "escaped"
+    )
+  } else {
+    root <- tempfile("aofm-root-link-")
+    outside <- tempfile("aofm-root-outside-")
+    dir.create(root)
+    dir.create(outside)
+    expect_true(file.symlink(outside, file.path(root, ".readAOFM")))
+    expect_error(
+      readAOFM:::aofm_cache_paths(root, "tb_issuance"),
+      "escaped|symlink"
+    )
+    expect_false(dir.exists(file.path(outside, "data")))
 
-  prune_root <- tempfile("aofm-prune-link-")
-  prune_outside <- tempfile("aofm-prune-outside-")
-  paths <- readAOFM:::aofm_cache_paths(prune_root, "tb_issuance")
-  dir.create(prune_outside)
-  victim <- file.path(
-    prune_outside,
-    paste0(paste(rep("a", 64L), collapse = ""), ".xlsx")
-  )
-  file.copy(fixture_path("tb_issuance.xlsx"), victim)
-  Sys.setFileTime(victim, Sys.time() - 3600)
-  expect_true(file.symlink(
-    prune_outside,
-    file.path(paths$data_root, "evil")
-  ))
-  expect_error(
-    readAOFM:::aofm_prune_cache(
-      paths,
-      keep_file = file.path(paths$table_directory, "none.xlsx"),
-      max_age = 1,
-      max_files = 100L,
-      max_cache_bytes = 500 * 1024^2
-    ),
-    "escaped|symlink"
-  )
-  expect_true(file.exists(victim))
+    prune_root <- tempfile("aofm-prune-link-")
+    prune_outside <- tempfile("aofm-prune-outside-")
+    paths <- readAOFM:::aofm_cache_paths(prune_root, "tb_issuance")
+    dir.create(prune_outside)
+    victim <- file.path(
+      prune_outside,
+      paste0(paste(rep("a", 64L), collapse = ""), ".xlsx")
+    )
+    file.copy(fixture_path("tb_issuance.xlsx"), victim)
+    Sys.setFileTime(victim, Sys.time() - 3600)
+    expect_true(file.symlink(
+      prune_outside,
+      file.path(paths$data_root, "evil")
+    ))
+    expect_error(
+      readAOFM:::aofm_prune_cache(
+        paths,
+        keep_file = file.path(paths$table_directory, "none.xlsx"),
+        max_age = 1,
+        max_files = 100L,
+        max_cache_bytes = 500 * 1024^2
+      ),
+      "escaped|symlink"
+    )
+    expect_true(file.exists(victim))
+  }
 })
 
 test_that("official transport requires attested final URL and restores old bytes", {
