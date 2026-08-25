@@ -4,7 +4,14 @@
 \alias{search_aofm}
 \title{Search the supported AOFM table catalogue}
 \usage{
-search_aofm(query, read = FALSE, csv = FALSE)
+search_aofm(
+  query,
+  read = FALSE,
+  csv = FALSE,
+  timeout = getOption("readAOFM.search_timeout", 3),
+  retries = getOption("readAOFM.search_retries", 0L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 }
 \arguments{
 \item{query}{One non-empty search string. Phrases are preferred when they
@@ -16,6 +23,19 @@ If \code{TRUE}, read each matching table and return the parsed result.}
 \item{csv}{Logical scalar (default \code{FALSE}). When \code{read = TRUE} and \code{csv = TRUE}, pass the
 option to \code{\link[=read_aofm]{read_aofm()}} so parsed CSVs are written below \verb{output/} in the
 current working directory. It has no effect when \code{read = FALSE}.}
+
+\item{timeout}{Positive finite numeric scalar giving the per-attempt timeout
+used for \code{read = TRUE} (default
+\code{getOption("readAOFM.search_timeout", 3)} seconds; maximum 300 seconds).
+Search itself is offline, but the value is still validated on every call.}
+
+\item{retries}{Non-negative integer scalar giving retries after the first
+attempt when \code{read = TRUE} (default
+\code{getOption("readAOFM.search_retries", 0L)}; maximum 5).}
+
+\item{max_bytes}{Positive finite numeric scalar giving the maximum accepted
+workbook size when \code{read = TRUE} (default
+\code{getOption("readAOFM.max_bytes", 100 * 1024^2)}; maximum 1 GiB).}
 }
 \value{
 When \code{read = FALSE}, a base data frame with columns \code{security},
@@ -37,13 +57,16 @@ to \code{\link[=read_aofm]{read_aofm()}}.
 \details{
 With \code{read = TRUE}, each match is immediately passed to \code{\link[=read_aofm]{read_aofm()}} and
 therefore requires an HTTPS request for every selected workbook. The
-package does not require credentials and the reader does not keep a
-persistent cache.
+package does not require credentials; the reader stages workbooks in
+temporary files and does not use the managed cache unless the caller chooses
+\code{\link[=download_aofm_file]{download_aofm_file()}} explicitly.
 
 Invalid queries (non-character, length other than one, \code{NA}, or blank after
-trimming) throw an error. Search results are deterministic for a fixed
-catalogue, but parsed values and available source files depend on the live
-AOFM workbooks.
+trimming), invalid logical flags, or invalid transport bounds throw an
+error. Search results are deterministic for a fixed local catalogue and do
+not create files. With \code{read = TRUE}, \code{csv = TRUE} writes parsed results
+beneath \verb{output/} in the current working directory; parsed values and
+available source files depend on the live AOFM workbooks.
 }
 \examples{
 # All of these searches are offline.

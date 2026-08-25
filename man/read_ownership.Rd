@@ -4,7 +4,13 @@
 \alias{read_ownership}
 \title{Read AOFM ownership of Australian Government Securities}
 \usage{
-read_ownership(aofm_table, csv = FALSE)
+read_ownership(
+  aofm_table,
+  csv = FALSE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 }
 \arguments{
 \item{aofm_table}{Either \code{ownership_public} or \code{ownership_nonresident}. It is
@@ -12,6 +18,18 @@ normally selected through \code{\link[=read_aofm]{read_aofm()}}.}
 
 \item{csv}{Logical scalar (default \code{FALSE}). If \code{TRUE}, write one CSV per returned worksheet
 beneath \verb{output/} in the current working directory.}
+
+\item{timeout}{Positive finite numeric scalar giving the per-attempt workbook
+transport timeout in seconds (default \code{getOption("readAOFM.timeout", 30)};
+maximum 300 seconds).}
+
+\item{retries}{Non-negative integer scalar giving the number of retries after
+the first workbook transport attempt (default
+\code{getOption("readAOFM.retries", 1L)}; maximum 5).}
+
+\item{max_bytes}{Positive finite numeric scalar giving the maximum accepted
+workbook size in bytes (default
+\code{getOption("readAOFM.max_bytes", 100 * 1024^2)}; maximum 1 GiB).}
 }
 \value{
 A named list of data frames. Public ownership returns the first two
@@ -24,8 +42,9 @@ Component names combine the table ID and source worksheet name.
 \code{read_ownership()} reads the public register or non-resident holdings
 workbook and returns one long-form data frame per source worksheet. It
 downloads over HTTPS without credentials and stages the workbook in a
-temporary file; the package does not maintain a persistent cache.
-The package-wide bounded timeout and size safeguards are applied.
+temporary file; the package does not use the managed cache unless
+\code{\link[=download_aofm_file]{download_aofm_file()}} is called explicitly. The public timeout, retry, and
+workbook-size safeguards are applied.
 }
 \details{
 Missing sheets, rows, columns, or changed source layouts cause an

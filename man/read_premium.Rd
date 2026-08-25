@@ -4,7 +4,13 @@
 \alias{read_premium}
 \title{Read AOFM term-premium estimates}
 \usage{
-read_premium(aofm_table, csv = FALSE)
+read_premium(
+  aofm_table,
+  csv = FALSE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 }
 \arguments{
 \item{aofm_table}{Must be the catalogue ID \code{termpremium}. It is normally
@@ -12,6 +18,18 @@ selected through \code{\link[=read_aofm]{read_aofm()}}.}
 
 \item{csv}{Logical scalar (default \code{FALSE}). If \code{TRUE}, write the parsed result to
 \code{output/termpremium.csv} beneath the current working directory.}
+
+\item{timeout}{Positive finite numeric scalar giving the per-attempt workbook
+transport timeout in seconds (default \code{getOption("readAOFM.timeout", 30)};
+maximum 300 seconds).}
+
+\item{retries}{Non-negative integer scalar giving the number of retries after
+the first workbook transport attempt (default
+\code{getOption("readAOFM.retries", 1L)}; maximum 5).}
+
+\item{max_bytes}{Positive finite numeric scalar giving the maximum accepted
+workbook size in bytes (default
+\code{getOption("readAOFM.max_bytes", 100 * 1024^2)}; maximum 1 GiB).}
 }
 \value{
 A tibble/data frame sorted by \code{date}, with \code{date} as a \code{Date},
@@ -21,9 +39,9 @@ columns. Exact measures follow the current AOFM workbook.
 \description{
 \code{read_premium()} downloads the \code{termpremium} workbook and combines its two
 source worksheets into a date-sorted long-form result. The source is fetched
-over HTTPS without credentials and staged in a temporary file; no persistent
-package cache is used. The package-wide bounded timeout and size safeguards
-are applied.
+over HTTPS without credentials and staged in a temporary file; no managed
+cache is used. The public timeout, retry, and workbook-size safeguards are
+applied.
 }
 \details{
 Missing date fields, empty workbooks, and changed worksheet layouts

@@ -17,10 +17,11 @@ knitr::opts_chunk$set(
 ```
 
 `readAOFM` ships a local catalogue that maps AOFM Data Hub workbooks to search
-terms, public selectors, and parser families. This article records the 23
-parser-supported entries and the seven historical entries available through
-raw workbook download. Reader calls retrieve current source workbooks; the
-catalogue itself supplies stable discovery metadata.
+terms, public selectors, parser families, and direct HTTPS source routes. This
+article records the 23 parser-supported entries and the seven raw-only /
+unsupported entries available through raw workbook download. Reader calls
+retrieve current source workbooks; the catalogue itself supplies stable,
+offline discovery metadata.
 
 ## The 23 parsed tables
 
@@ -107,11 +108,12 @@ readAOFM::search_aofm("inflation")[, c("id", "read_call")]
 readAOFM::search_aofm("secondary market")[, c("id", "read_call")]
 ```
 
-## Raw-workbook catalogue entries
+## Raw-only workbook catalogue entries
 
 The following seven catalogue IDs are available through the raw workbook
 download path while the parser-supported workflow focuses on the 23 entries
-above:
+above. They remain explicit catalogue rows with `supported = FALSE`, not
+additional parser families:
 
 ```{r raw-only}
 raw_only_ids <- c(
@@ -141,6 +143,25 @@ stopifnot(
 raw_only
 ```
 
+The complete map is available without contacting AOFM:
+
+```{r complete-catalog}
+all_catalogue <- readAOFM::aofm_catalog(include_unsupported = TRUE)
+stopifnot(
+  nrow(all_catalogue) == 30L,
+  sum(all_catalogue$supported) == 23L,
+  all(grepl("^https://www\\.aofm\\.gov\\.au/sites/default/files/", all_catalogue$source_url)),
+  all(!grepl("/media/", all_catalogue$source_url, fixed = TRUE))
+)
+all_catalogue[!all_catalogue$supported,
+              c("table_id", "source_url", "file_name", "supported")]
+```
+
+The raw-only source filenames remain extension-compatible with their direct
+routes, including the legacy `.xls` files. `portfolio_overview` is a verified
+historical direct workbook that is not currently listed on the Data Hub; it is
+retained as raw-only and is not presented as current or parser-supported.
+
 `download_aofm_xlsx()` is the public raw-workbook helper. Its selectors are
 the `security` and `type` values shown for parsed rows. The raw-only rows have
 no parser and no public `read_aofm()` call; because their selector fields are
@@ -156,13 +177,33 @@ password, or API key. `search_aofm()` performs local discovery. Reader and raw
 download calls request the workbook URL recorded in the package catalogue over
 HTTPS, stage it in a temporary file (readers), or save it beneath `data/` (raw
 downloads). Each call retrieves the current source rather than using a
-persistent package cache.
+persistent package cache. The opt-in `download_aofm_file()` API instead keeps a
+verified, content-addressed workbook and metadata beneath the caller-selected
+`.readAOFM/data/<table-id>/` root; `aofm_file_metadata()` and
+`read_aofm_file()` inspect and parse local files without network access.
 
-AOFM controls workbook URLs, publication cadence, sheet names, columns, and
-historical coverage. For example, turnover is published quarterly with a
-reporting lag, while several raw-only datasets are historical. A changed URL,
-HTML error page, unavailable source, or changed workbook layout can therefore
-make a read fail. Use the table ID, selector, error text, and access date when
-reporting a source change. The packaged workbook snapshots used by tests and
-vignettes are deterministic examples, not a replacement for the live AOFM
-source or a runtime cache.
+Readers and raw downloads accept `timeout`, `retries`, and `max_bytes` controls
+(30 seconds, one retry, and 100 MiB by default). Managed downloads additionally
+bound cache age, file count, total bytes, and lock wait time. These controls
+keep network and filesystem work explicit and finite for scripts, tests, and
+CRAN builds.
+
+AOFM controls workbook URLs, sheet names, columns, and historical coverage.
+Turnover observation periods and publication cadence are separate: current
+turnover workbooks contain monthly observations, the Data Hub update is
+quarterly with an approximately two-month lag, historical **By Tenor** is
+monthly, and historical **By Category** is quarterly. The historical turnover
+companions end in December 2025 and the redesigned current workbooks begin in
+January 2026. `read_secondary()` joins them by `period`, `group`, and `name`,
+uses current rows for overlaps, rejects duplicate keys, and attaches the two
+source records as `aofm_sources`. The groups are `tenor`, `investor_type`,
+`security`, `region`, and `counterparty`.
+
+The continuity CSV retains `legacy_max = 2024-12-31` as the boundary of the
+pinned retired-baseline comparison. The replacement historical workbook
+extends through `2025-12-31`; together with the current `2026-01-31` onward
+workbook it provides the documented no-gap transition. The packaged workbook
+snapshots used by tests and vignettes are deterministic examples, not a
+replacement for the live AOFM source or a runtime cache. A changed URL, HTML
+error page, unavailable source, or changed workbook layout can therefore make
+a read fail; report the table ID, selector, error text, and access date.

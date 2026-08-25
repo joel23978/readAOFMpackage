@@ -15,4 +15,16 @@ test_that("fixture workbooks are present and have the expected sheets", {
     readxl::excel_sheets(fixture_path("tb_position_dealt.xlsx")),
     c("Notes", "FaceValue", "MarketValue", "Delta", "Duration", "Tenor")
   )
+  expect_equal(
+    readxl::excel_sheets(fixture_path("summary.xlsx")),
+    c("Notes", "Portfolio")
+  )
+  expect_equal(
+    readxl::excel_sheets(fixture_path("slf.xlsx")),
+    c("Notes", "Transactions")
+  )
+  expect_equal(
+    readxl::excel_sheets(fixture_path("tb_turnover_current.xlsx")),
+    c("Notes", "Security", "Region", "Counterparty")
+  )
 })

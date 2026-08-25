@@ -48,10 +48,14 @@ reference:
   - readAOFM-package
   - read_aofm
   - search_aofm
+  - aofm_catalog
 
 - title: Download raw workbooks
   contents:
   - download_aofm_xlsx
+  - download_aofm_file
+  - aofm_file_metadata
+  - read_aofm_file
 
 - title: Positions and holdings
   contents:

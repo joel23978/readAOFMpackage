@@ -4,7 +4,13 @@
 \alias{read_eom}
 \title{Read an AOFM end-of-month positions workbook}
 \usage{
-read_eom(aofm_table, csv = FALSE)
+read_eom(
+  aofm_table,
+  csv = FALSE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 }
 \arguments{
 \item{aofm_table}{One of \code{aggregate_position_dealt},
@@ -15,32 +21,51 @@ read_eom(aofm_table, csv = FALSE)
 
 \item{csv}{Logical scalar (default \code{FALSE}). If \code{TRUE}, write one CSV per returned component
 to \verb{output/} beneath the current working directory.}
+
+\item{timeout}{Positive finite numeric scalar giving the per-attempt workbook
+transport timeout in seconds (default \code{getOption("readAOFM.timeout", 30)};
+maximum 300 seconds).}
+
+\item{retries}{Non-negative integer scalar giving the number of retries after
+the first workbook transport attempt (default
+\code{getOption("readAOFM.retries", 1L)}; maximum 5).}
+
+\item{max_bytes}{Positive finite numeric scalar giving the maximum accepted
+workbook size in bytes (default
+\code{getOption("readAOFM.max_bytes", 100 * 1024^2)}; maximum 1 GiB).}
 }
 \value{
-A named list of four tibble/data-frame components. Each component
-preserves workbook identity fields, adds \code{date} as a \code{Date}, and contains
-numeric \code{value} observations in long form. Component names are the stable
-table ID followed by the worksheet name, for example
+A named list with one tibble/data-frame component per non-Notes
+worksheet. Each component preserves workbook identity fields, adds \code{date}
+as a \code{Date}, and contains numeric \code{value} observations in long form.
+Treasury Bond, Treasury Indexed Bond, and Treasury Note components include
+a \code{Series} identifier where applicable. Component names are the stable table
+ID followed by the worksheet name, for example
 \code{tb_position_dealt_FaceValue}.
 }
 \description{
 \code{read_eom()} downloads and tidies one of the eight end-of-month position
-workbooks. The current parser returns the four data worksheets after the
-notes sheet (\code{FaceValue}, \code{MarketValue}, \code{Delta}, and \code{Duration}); although
-some source workbooks also contain a \code{Tenor} worksheet, it is not currently
-included in the returned list. Dates are normalised to \code{Date} and measures
-to numeric values.
+workbooks. It returns one named component for each non-Notes data worksheet.
+Current Treasury Bond and Treasury Indexed Bond workbooks provide
+\code{FaceValue}, \code{MarketValue}, \code{Delta}, \code{Duration}, and \code{Tenor} components;
+AOFM may add or remove worksheets, so callers should inspect the names of
+the returned list. For Treasury Bond, Treasury Indexed Bond, and Treasury
+Note tables, each component includes a \code{Series} identifier when repeated
+security identities occur. Dates are normalised to \code{Date} and measures to
+numeric values.
 }
 \details{
 The workbook is fetched over HTTPS without credentials and staged
 in a temporary file. Missing worksheets, rows, columns, or an incompatible
-AOFM layout cause an error; no persistent package cache is used. Transport
-has the package-wide bounded timeout and size safeguards described above.
+AOFM layout cause an error; no managed cache is used. Transport has the
+public bounded timeout and size safeguards described above. Set \code{csv = TRUE}
+to write one CSV per component beneath \verb{output/} in the current working
+directory.
 }
 \examples{
 search_aofm("tb dealt")
 
-# This is a complete official snapshot with four long data worksheets;
+# This is a complete official snapshot with five long data worksheets;
 # run the offline parse interactively because it can take several seconds.
 fixture <- system.file("extdata", "tb_position_dealt.xlsx", package = "readAOFM")
 if (interactive() && requireNamespace("testthat", quietly = TRUE) && nzchar(fixture)) {

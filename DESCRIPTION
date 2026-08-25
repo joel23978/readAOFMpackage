@@ -1,6 +1,6 @@
 Package: readAOFM
 Title: Read and Tidy Australian Office of Financial Management Data
-Version: 0.1.0
+Version: 0.1.1
 Authors@R:
     person(given = "Joel", family = "F", email = "joel23978@users.noreply.github.com",
            role = c("aut", "cre", "cph"))
@@ -22,6 +22,7 @@ Depends:
     R (>= 4.1.0)
 Imports:
     curl,
+    digest,
     data.table,
     dplyr (>= 1.0.0),
     janitor,
@@ -35,7 +36,8 @@ Suggests:
     knitr,
     pkgdown,
     rmarkdown,
-    testthat (>= 3.1.4)
+    testthat (>= 3.1.4),
+    withr
 VignetteBuilder: knitr
 Config/Needs/website: pkgdown
 Config/testthat/edition: 3

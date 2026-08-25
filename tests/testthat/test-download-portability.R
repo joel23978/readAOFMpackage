@@ -1,3 +1,6 @@
+# The synthetic /media error URLs below exercise transport failures only. The
+# successful path uses the current direct catalogue route.
+
 test_that("workbook downloads use bounded transport settings", {
   captured <- new.env(parent = emptyenv())
   fixture <- tempfile(fileext = ".xlsx")
@@ -20,23 +23,24 @@ test_that("workbook downloads use bounded transport settings", {
     .package = "curl"
   )
 
-  result <- readAOFM:::download_aofm_workbook(
-    "https://www.aofm.gov.au/media/591",
-    fixture
+  url <- paste0(
+    "https://www.aofm.gov.au/sites/default/files/2025-06-20/",
+    "treasury%20bonds%20-%20issuance.xlsx"
   )
+  result <- readAOFM:::download_aofm_workbook(url, fixture)
 
   expect_identical(result, fixture)
-  expect_identical(captured$url, "https://www.aofm.gov.au/media/591")
-  expect_identical(captured$path, fixture)
+  expect_identical(captured$url, url)
+  expect_identical(dirname(captured$path), dirname(fixture))
+  expect_match(basename(captured$path), "[.]part$")
   expect_identical(captured$handle_received, captured$handle)
-  expect_true(captured$handle$followlocation)
-  expect_equal(captured$handle$maxredirs, 10L)
-  expect_identical(captured$handle$useragent, "readAOFM/0.1.0")
-  expect_equal(captured$handle$connecttimeout, 15)
-  expect_equal(captured$handle$timeout, 120)
-  expect_equal(captured$handle$low_speed_time, 30)
-  expect_equal(captured$handle$low_speed_limit, 1024)
-  expect_equal(captured$handle$maxfilesize, 100 * 1024^2)
+  expect_false(captured$handle$followlocation)
+  expect_equal(captured$handle$connecttimeout, 10)
+  expect_equal(captured$handle$timeout, 30)
+  expect_equal(captured$handle$maxfilesize_large, 100 * 1024^2)
+  expect_identical(captured$handle$protocols_str, "https")
+  expect_identical(captured$handle$redir_protocols_str, "https")
+  expect_match(captured$handle$useragent, "^readAOFM/0[.]1[.]1$")
 })
 
 test_that("workbook downloads retain HTTP and content-type errors", {

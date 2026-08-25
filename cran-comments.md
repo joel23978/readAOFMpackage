@@ -1,32 +1,26 @@
 ## Release status
 
-This is the initial submission of readAOFM 0.1.0. The package has not yet
+This is the first proposed CRAN submission of readAOFM. Version 0.1.1 has not
 been submitted to or accepted by CRAN.
 
 Maintainer: Joel F
 
-## Test environment
+## Test environments
 
-* Local: macOS Sequoia 15.6 (Apple Silicon), R 4.5.1, UTF-8; Apple clang
-  17.0.0 and GNU Fortran 15.1.0.
-
-The source tarball was built with `R CMD build`, installed into a clean
-isolated library, and checked with `R CMD check --as-cran`.
+* Local: macOS Sequoia 15.6, arm64, R 4.5.1 (2025-06-13)
 
 ## R CMD check results
 
-* 0 errors | 0 warnings | 1 note
-* 169 test expectations passed with no failures, warnings, or skips.
-* All examples, three vignettes and their rebuild, and the PDF and HTML
-  manuals completed successfully.
+The final 1,187,694-byte source tarball was built with `R CMD build`, installed
+into a clean isolated library, and checked with
+`R CMD check --as-cran --no-manual`.
 
-The note is:
+* 0 ERRORs, 0 WARNINGs, 0 NOTEs (`Status: OK`)
+* testthat: 476 PASS, 0 FAIL, 0 WARN, 0 SKIP
+* examples, vignettes, vignette rebuild, installed files, dependencies, and
+  future timestamps: OK
 
-* `New submission`
-
-The `New submission` note is expected because readAOFM has not previously
-been published on CRAN.
-
-Win-builder and R-hub were not run for this preparation pass. Multi-platform
-GitHub Actions checks run on source-branch and default-branch pushes; results
-are recorded in the repository's Actions history.
+The local check disabled CRAN's remote incoming network probe; package and
+documentation URL/site checks were run separately. The configured GitHub
+Actions matrix could not start because the repository owner's GitHub billing
+or spending limit was exhausted, so no remote platform result is claimed.

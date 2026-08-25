@@ -4,7 +4,13 @@
 \alias{read_eofy}
 \title{Read the AOFM end-of-financial-year executive summary}
 \usage{
-read_eofy(aofm_table, csv = FALSE)
+read_eofy(
+  aofm_table,
+  csv = FALSE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 }
 \arguments{
 \item{aofm_table}{Must be the catalogue ID \code{summary}. It is normally selected
@@ -12,6 +18,18 @@ through \code{\link[=read_aofm]{read_aofm()}} rather than called directly.}
 
 \item{csv}{Logical scalar (default \code{FALSE}). If \code{TRUE}, also write the parsed data to
 \code{output/eofy_executive_summary.csv} beneath the current working directory.}
+
+\item{timeout}{Positive finite numeric scalar giving the per-attempt workbook
+transport timeout in seconds (default \code{getOption("readAOFM.timeout", 30)};
+maximum 300 seconds).}
+
+\item{retries}{Non-negative integer scalar giving the number of retries after
+the first workbook transport attempt (default
+\code{getOption("readAOFM.retries", 1L)}; maximum 5).}
+
+\item{max_bytes}{Positive finite numeric scalar giving the maximum accepted
+workbook size in bytes (default
+\code{getOption("readAOFM.max_bytes", 100 * 1024^2)}; maximum 1 GiB).}
 }
 \value{
 A tibble/data frame in long form. It contains the source identifier
@@ -23,10 +41,9 @@ the current AOFM workbook.
 \code{read_eofy()} downloads the \code{summary} workbook from the AOFM Data Hub and
 tidies its first worksheet into long form. The source is fetched over HTTPS
 without credentials and staged in a temporary file; the package
-does not maintain a persistent cache. Transport is bounded internally with a
-15-second connect timeout, a 120-second overall transfer limit, a 30-second
-low-speed abort below 1 KiB/s, and a 100 MiB workbook-size limit; these are
-not public arguments. A changed workbook layout or missing required columns
+does not use the managed cache unless \code{\link[=download_aofm_file]{download_aofm_file()}} is called
+explicitly. Transport is bounded by the public \code{timeout}, \code{retries}, and
+\code{max_bytes} arguments. A changed workbook layout or missing required columns
 causes an error.
 }
 \examples{

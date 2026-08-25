@@ -111,8 +111,9 @@ aofm_search_score <- function(query, tokens, text, security, type, id) {
 #'
 #' With `read = TRUE`, each match is immediately passed to [read_aofm()] and
 #' therefore requires an HTTPS request for every selected workbook. The
-#' package does not require credentials and the reader does not keep a
-#' persistent cache.
+#' package does not require credentials; the reader stages workbooks in
+#' temporary files and does not use the managed cache unless the caller chooses
+#' [download_aofm_file()] explicitly.
 #'
 #' @param query One non-empty search string. Phrases are preferred when they
 #'   match; otherwise all query tokens or any matching token are used.
@@ -121,6 +122,16 @@ aofm_search_score <- function(query, tokens, text, security, type, id) {
 #' @param csv Logical scalar (default `FALSE`). When `read = TRUE` and `csv = TRUE`, pass the
 #'   option to [read_aofm()] so parsed CSVs are written below `output/` in the
 #'   current working directory. It has no effect when `read = FALSE`.
+#' @param timeout Positive finite numeric scalar giving the per-attempt timeout
+#'   used for `read = TRUE` (default
+#'   `getOption("readAOFM.search_timeout", 3)` seconds; maximum 300 seconds).
+#'   Search itself is offline, but the value is still validated on every call.
+#' @param retries Non-negative integer scalar giving retries after the first
+#'   attempt when `read = TRUE` (default
+#'   `getOption("readAOFM.search_retries", 0L)`; maximum 5).
+#' @param max_bytes Positive finite numeric scalar giving the maximum accepted
+#'   workbook size when `read = TRUE` (default
+#'   `getOption("readAOFM.max_bytes", 100 * 1024^2)`; maximum 1 GiB).
 #' @returns When `read = FALSE`, a base data frame with columns `security`,
 #'   `type`, `id`, `reader`, and `read_call`; rows are reset to consecutive
 #'   integers and unsupported/raw-only catalogue rows are not included. A
@@ -131,9 +142,11 @@ aofm_search_score <- function(query, tokens, text, security, type, id) {
 #'
 #' @details
 #' Invalid queries (non-character, length other than one, `NA`, or blank after
-#' trimming) throw an error. Search results are deterministic for a fixed
-#' catalogue, but parsed values and available source files depend on the live
-#' AOFM workbooks.
+#' trimming), invalid logical flags, or invalid transport bounds throw an
+#' error. Search results are deterministic for a fixed local catalogue and do
+#' not create files. With `read = TRUE`, `csv = TRUE` writes parsed results
+#' beneath `output/` in the current working directory; parsed values and
+#' available source files depend on the live AOFM workbooks.
 #'
 #' @seealso [read_aofm()] for downloading and parsing, and
 #'   [download_aofm_xlsx()] for saving raw workbooks.
@@ -149,10 +162,23 @@ aofm_search_score <- function(query, tokens, text, security, type, id) {
 #'   search_aofm("tb issuance", read = TRUE)
 #' }
 #' @export
-search_aofm <- function(query, read = FALSE, csv = FALSE) {
+search_aofm <- function(
+    query,
+    read = FALSE,
+    csv = FALSE,
+    timeout = getOption("readAOFM.search_timeout", 3),
+    retries = getOption("readAOFM.search_retries", 0L),
+    max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)) {
   if (!is.character(query) || length(query) != 1 || is.na(query) || !nzchar(trimws(query))) {
     stop("`query` must be a single non-empty string.", call. = FALSE)
   }
+  if (!is.logical(read) || length(read) != 1L || is.na(read)) {
+    stop("`read` must be one non-missing logical value.", call. = FALSE)
+  }
+  if (!is.logical(csv) || length(csv) != 1L || is.na(csv)) {
+    stop("`csv` must be one non-missing logical value.", call. = FALSE)
+  }
+  aofm_validate_transport_bounds(timeout, retries, max_bytes)
 
   catalog <- aofm_search_catalog()
   normalized_query <- aofm_normalize_search_text(query)
@@ -208,7 +234,16 @@ search_aofm <- function(query, read = FALSE, csv = FALSE) {
   }
 
   results <- lapply(seq_len(nrow(matches)), function(i) {
-    read_aofm(matches$security[[i]], matches$type[[i]], csv = csv)
+    type <- matches$type[[i]]
+    if (is.na(type)) type <- NULL
+    read_aofm(
+      matches$security[[i]],
+      type,
+      csv = csv,
+      timeout = timeout,
+      retries = retries,
+      max_bytes = max_bytes
+    )
   })
   names(results) <- matches$id
 

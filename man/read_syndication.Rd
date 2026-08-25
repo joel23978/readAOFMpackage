@@ -4,7 +4,13 @@
 \alias{read_syndication}
 \title{Read AOFM syndication details}
 \usage{
-read_syndication(aofm_table, csv = FALSE)
+read_syndication(
+  aofm_table,
+  csv = FALSE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 }
 \arguments{
 \item{aofm_table}{Either \code{tb_syndication} or \code{tib_syndication}. It is
@@ -12,19 +18,31 @@ normally selected through \code{\link[=read_aofm]{read_aofm()}}.}
 
 \item{csv}{Logical scalar (default \code{FALSE}). If \code{TRUE}, write the parsed result to
 \verb{output/<aofm_table>.csv} beneath the current working directory.}
+
+\item{timeout}{Positive finite numeric scalar giving the per-attempt workbook
+transport timeout in seconds (default \code{getOption("readAOFM.timeout", 30)};
+maximum 300 seconds).}
+
+\item{retries}{Non-negative integer scalar giving the number of retries after
+the first workbook transport attempt (default
+\code{getOption("readAOFM.retries", 1L)}; maximum 5).}
+
+\item{max_bytes}{Positive finite numeric scalar giving the maximum accepted
+workbook size in bytes (default
+\code{getOption("readAOFM.max_bytes", 100 * 1024^2)}; maximum 1 GiB).}
 }
 \value{
 A tibble/data frame with source identifier columns, \code{pricing_date}
 and \code{settlement_date} as \code{Date} values where present, a \code{type} identifying
-\code{new_bond} or \code{tap}, and long-form \code{name} and \code{value} columns. Exact source
-fields follow the current AOFM workbook.
+\code{new_bond} or \code{tap}, and long-form \code{name} and numeric \code{value} columns. Exact
+source fields follow the current AOFM workbook.
 }
 \description{
 \code{read_syndication()} reads the syndicated-issue workbooks for Treasury Bonds
 or Treasury Indexed Bonds. It downloads over HTTPS without credentials,
 stages the workbook in a temporary file, and combines the source sheets into
-a single long-form result. No persistent package cache is used; the package-
-wide bounded timeout and size safeguards are applied.
+a single long-form result. No managed cache is used; the public timeout,
+retry, and workbook-size safeguards are applied.
 }
 \details{
 Notes worksheets are excluded. Empty files, missing required date

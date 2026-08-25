@@ -4,7 +4,13 @@
 \alias{read_transactional}
 \title{Read a transactional AOFM workbook}
 \usage{
-read_transactional(aofm_table, csv = FALSE)
+read_transactional(
+  aofm_table,
+  csv = FALSE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 }
 \arguments{
 \item{aofm_table}{One of \code{tb_issuance}, \code{tb_buyback}, \code{tib_issuance},
@@ -13,6 +19,18 @@ through \code{\link[=read_aofm]{read_aofm()}}.}
 
 \item{csv}{Logical scalar (default \code{FALSE}). If \code{TRUE}, write the parsed result to
 \verb{output/<aofm_table>.csv} beneath the current working directory.}
+
+\item{timeout}{Positive finite numeric scalar giving the per-attempt workbook
+transport timeout in seconds (default \code{getOption("readAOFM.timeout", 30)};
+maximum 300 seconds).}
+
+\item{retries}{Non-negative integer scalar giving the number of retries after
+the first workbook transport attempt (default
+\code{getOption("readAOFM.retries", 1L)}; maximum 5).}
+
+\item{max_bytes}{Positive finite numeric scalar giving the maximum accepted
+workbook size in bytes (default
+\code{getOption("readAOFM.max_bytes", 100 * 1024^2)}; maximum 1 GiB).}
 }
 \value{
 A tibble/data frame in long form. Workbook identifier columns are
@@ -26,9 +44,9 @@ current source workbook.
 \code{read_transactional()} handles tender, buyback, retail-facility, and
 securities-lending workbooks. It downloads the selected workbook over HTTPS
 without credentials, stages it in a temporary file, and pivots numeric
-measures into long form. The package has no persistent cache and
-applies the package-wide bounded timeout and size safeguards described in
-\code{\link[=read_aofm]{read_aofm()}}.
+measures into long form. The package does not use the managed cache unless
+\code{\link[=download_aofm_file]{download_aofm_file()}} is called explicitly and applies the public bounded
+timeout and size safeguards described in \code{\link[=read_aofm]{read_aofm()}}.
 }
 \details{
 Empty files, missing required columns, non-workbook responses, and

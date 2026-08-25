@@ -1,5 +1,5 @@
 test_that("read_aofm returns all supported tables when security is omitted", {
-  reader_stub <- function(aofm_table, csv = FALSE) {
+  reader_stub <- function(aofm_table, csv = FALSE, ...) {
     list(aofm_table = aofm_table, csv = csv)
   }
 
@@ -24,7 +24,7 @@ test_that("read_aofm returns all supported tables when security is omitted", {
 })
 
 test_that("read_aofm can filter by type without security", {
-  reader_stub <- function(aofm_table, csv = FALSE) {
+  reader_stub <- function(aofm_table, csv = FALSE, ...) {
     list(aofm_table = aofm_table, csv = csv)
   }
 
@@ -98,7 +98,7 @@ test_that("search_aofm understands foreign ownership language", {
 
 test_that("search_aofm can read multiple matches through read_aofm", {
   testthat::local_mocked_bindings(
-    read_aofm = function(security = NULL, type = NULL, csv = FALSE) {
+    read_aofm = function(security = NULL, type = NULL, csv = FALSE, ...) {
       list(security = security, type = type, csv = csv)
     },
     .package = "readAOFM"
@@ -113,7 +113,7 @@ test_that("search_aofm can read multiple matches through read_aofm", {
 
 test_that("search_aofm can read a single exact match", {
   testthat::local_mocked_bindings(
-    read_aofm = function(security = NULL, type = NULL, csv = FALSE) {
+    read_aofm = function(security = NULL, type = NULL, csv = FALSE, ...) {
       data.frame(security = security, type = type, csv = csv, stringsAsFactors = FALSE)
     },
     .package = "readAOFM"
@@ -128,16 +128,16 @@ test_that("search_aofm can read a single exact match", {
 
 test_that("read_aofm returns all supported tables for a security when type is omitted", {
   testthat::local_mocked_bindings(
-    read_eom = function(aofm_table, csv = FALSE) {
+    read_eom = function(aofm_table, csv = FALSE, ...) {
       list(aofm_table = aofm_table, csv = csv, reader = "read_eom")
     },
-    read_transactional = function(aofm_table, csv = FALSE) {
+    read_transactional = function(aofm_table, csv = FALSE, ...) {
       list(aofm_table = aofm_table, csv = csv, reader = "read_transactional")
     },
-    read_syndication = function(aofm_table, csv = FALSE) {
+    read_syndication = function(aofm_table, csv = FALSE, ...) {
       list(aofm_table = aofm_table, csv = csv, reader = "read_syndication")
     },
-    read_secondary = function(aofm_table, csv = FALSE) {
+    read_secondary = function(aofm_table, csv = FALSE, ...) {
       list(aofm_table = aofm_table, csv = csv, reader = "read_secondary")
     },
     .package = "readAOFM"
@@ -170,7 +170,11 @@ test_that("read_aofm parses tb issuance from a fixture workbook", {
     },
     curl_fetch_disk = function(url, path, ...) {
       file.copy(fixture, path, overwrite = TRUE)
-      invisible(path)
+      list(
+        status_code = 200L,
+        type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        url = url
+      )
     },
     .package = "curl"
   )
@@ -191,7 +195,11 @@ test_that("read_aofm threads csv through to the underlying reader", {
   testthat::local_mocked_bindings(
     curl_fetch_disk = function(url, path, ...) {
       file.copy(fixture, path, overwrite = TRUE)
-      invisible(path)
+      list(
+        status_code = 200L,
+        type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        url = url
+      )
     },
     .package = "curl"
   )
@@ -215,7 +223,11 @@ test_that("read_aofm parses tb dealt positions from a fixture workbook", {
   testthat::local_mocked_bindings(
     curl_fetch_disk = function(url, path, ...) {
       file.copy(fixture, path, overwrite = TRUE)
-      invisible(path)
+      list(
+        status_code = 200L,
+        type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        url = url
+      )
     },
     .package = "curl"
   )
@@ -223,7 +235,8 @@ test_that("read_aofm parses tb dealt positions from a fixture workbook", {
   x <- read_aofm("tb", "dealt")
 
   expect_type(x, "list")
-  expect_equal(length(x), 4)
+  expect_equal(length(x), 5)
+  expect_true(any(grepl("Tenor", names(x), fixed = TRUE)))
   expect_true(all(vapply(x, is.data.frame, logical(1))))
   expect_true(any(grepl("FaceValue", names(x), fixed = TRUE)))
 })
@@ -234,7 +247,11 @@ test_that("read_aofm parses tb syndication from a fixture workbook", {
   testthat::local_mocked_bindings(
     curl_fetch_disk = function(url, path, ...) {
       file.copy(fixture, path, overwrite = TRUE)
-      invisible(path)
+      list(
+        status_code = 200L,
+        type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        url = url
+      )
     },
     .package = "curl"
   )
@@ -254,7 +271,11 @@ test_that("read_aofm parses tib syndication from a fixture workbook", {
   testthat::local_mocked_bindings(
     curl_fetch_disk = function(url, path, ...) {
       file.copy(fixture, path, overwrite = TRUE)
-      invisible(path)
+      list(
+        status_code = 200L,
+        type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        url = url
+      )
     },
     .package = "curl"
   )

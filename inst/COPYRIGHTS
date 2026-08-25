@@ -27,7 +27,11 @@ endorsement, sponsorship, or affiliation. Third-party rights may remain with
 their owners and may require separate permission. Check the current AOFM
 notice and source terms before redistributing or relying on a snapshot.
 
-The five packaged snapshots and their source URLs are:
+The five packaged snapshots and their original acquisition URLs are listed
+below. These retired `/media/` routes are retained only as historical
+provenance for the exact bundled bytes; they are not the package's current
+runtime catalogue routes. Current direct Data Hub routes and byte comparisons
+are recorded in `inst/extdata/README.md`.
 
 * `tb_issuance.xlsx` — <https://www.aofm.gov.au/media/591>
 * `tb_position_dealt.xlsx` — <https://www.aofm.gov.au/media/578>

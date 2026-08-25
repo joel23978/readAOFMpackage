@@ -1,7 +1,11 @@
 test_that("the public API export and formal contract is stable", {
   expected_exports <- c(
+    "aofm_catalog",
+    "aofm_file_metadata",
+    "download_aofm_file",
     "download_aofm_xlsx",
     "read_aofm",
+    "read_aofm_file",
     "read_eofy",
     "read_eom",
     "read_ownership",
@@ -27,11 +31,24 @@ test_that("the public API export and formal contract is stable", {
 
   expect_identical(
     formals_text("download_aofm_xlsx"),
-    c(security = "NULL", type = "NULL")
+    c(
+      security = "NULL",
+      type = "NULL",
+      timeout = "getOption(\"readAOFM.timeout\", 30)",
+      retries = "getOption(\"readAOFM.retries\", 1L)",
+      max_bytes = "getOption(\"readAOFM.max_bytes\", 100 * 1024^2)"
+    )
   )
   expect_identical(
     formals_text("read_aofm"),
-    c(security = "NULL", type = "NULL", csv = "FALSE")
+    c(
+      security = "NULL",
+      type = "NULL",
+      csv = "FALSE",
+      timeout = "getOption(\"readAOFM.timeout\", 30)",
+      retries = "getOption(\"readAOFM.retries\", 1L)",
+      max_bytes = "getOption(\"readAOFM.max_bytes\", 100 * 1024^2)"
+    )
   )
   for (name in c(
     "read_eofy",
@@ -44,12 +61,35 @@ test_that("the public API export and formal contract is stable", {
   )) {
     expect_identical(
       formals_text(name),
-      c(aofm_table = "", csv = "FALSE")
+      c(
+        aofm_table = "",
+        csv = "FALSE",
+        timeout = "getOption(\"readAOFM.timeout\", 30)",
+        retries = "getOption(\"readAOFM.retries\", 1L)",
+        max_bytes = "getOption(\"readAOFM.max_bytes\", 100 * 1024^2)"
+      )
     )
   }
   expect_identical(
     formals_text("search_aofm"),
-    c(query = "", read = "FALSE", csv = "FALSE")
+    c(
+      query = "",
+      read = "FALSE",
+      csv = "FALSE",
+      timeout = "getOption(\"readAOFM.search_timeout\", 3)",
+      retries = "getOption(\"readAOFM.search_retries\", 0L)",
+      max_bytes = "getOption(\"readAOFM.max_bytes\", 100 * 1024^2)"
+    )
+  )
+
+  expect_identical(formals_text("aofm_catalog"), c(include_unsupported = "FALSE"))
+  expect_identical(
+    formals_text("aofm_file_metadata"),
+    c(file_path = "", table_id = "NULL")
+  )
+  expect_identical(
+    formals_text("read_aofm_file"),
+    c(file_path = "", table_id = "", csv = "FALSE")
   )
 })
 
@@ -105,7 +145,7 @@ test_that("read_aofm dispatches each supported table once in catalogue order", {
     readAOFM:::aofm_index$fn != "no function exists"
   ]
   calls <- character()
-  reader_stub <- function(aofm_table, csv = FALSE) {
+  reader_stub <- function(aofm_table, csv = FALSE, ...) {
     calls <<- c(calls, aofm_table)
     list(table_id = aofm_table, csv = csv)
   }
@@ -185,7 +225,7 @@ test_that("official fixtures preserve representative output identities and invar
   )
 
   testthat::local_mocked_bindings(
-    download_aofm_table_workbook = function(aofm_table) fixture_map[[aofm_table]],
+    download_aofm_table_workbook = function(aofm_table, ...) fixture_map[[aofm_table]],
     .package = "readAOFM"
   )
 
@@ -211,12 +251,19 @@ test_that("official fixtures preserve representative output identities and invar
       "tb_position_dealt_FaceValue",
       "tb_position_dealt_MarketValue",
       "tb_position_dealt_Delta",
-      "tb_position_dealt_Duration"
+      "tb_position_dealt_Duration",
+      "tb_position_dealt_Tenor"
     )
   )
   expect_identical(
     unname(t(vapply(tb_position_dealt, dim, integer(2)))),
-    rbind(c(5430L, 7L), c(5450L, 7L), c(5450L, 7L), c(5450L, 7L))
+    rbind(
+      c(5450L, 8L),
+      c(5450L, 8L),
+      c(5450L, 8L),
+      c(5450L, 8L),
+      c(5450L, 8L)
+    )
   )
   for (table in tb_position_dealt) {
     expect_identical(
@@ -227,6 +274,7 @@ test_that("official fixtures preserve representative output identities and invar
         "Instrument",
         "Maturity",
         "Coupon (%)",
+        "Series",
         "date",
         "value"
       )
@@ -256,7 +304,7 @@ test_that("official fixtures preserve representative output identities and invar
   )
   expect_s3_class(tb_syndication$pricing_date, "Date")
   expect_s3_class(tb_syndication$settlement_date, "Date")
-  expect_type(tb_syndication$value, "character")
+  expect_type(tb_syndication$value, "double")
   expect_setequal(unique(tb_syndication$type), c("new_bond", "tap"))
 
   tib_issuance <- suppressMessages(read_aofm("tib", "issuance"))
@@ -273,7 +321,7 @@ test_that("official fixtures preserve representative output identities and invar
   expect_identical(names(tib_syndication), names(tb_syndication))
   expect_s3_class(tib_syndication$pricing_date, "Date")
   expect_s3_class(tib_syndication$settlement_date, "Date")
-  expect_type(tib_syndication$value, "character")
+  expect_type(tib_syndication$value, "double")
   expect_setequal(unique(tib_syndication$type), c("new_bond", "tap"))
 })
 
@@ -286,7 +334,7 @@ test_that("CSV output is opt-in and readers use temporary download staging", {
   on.exit(setwd(old), add = TRUE)
 
   testthat::local_mocked_bindings(
-    download_aofm_table_workbook = function(aofm_table) fixture,
+    download_aofm_table_workbook = function(aofm_table, ...) fixture,
     .package = "readAOFM"
   )
 
