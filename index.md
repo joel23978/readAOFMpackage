@@ -77,79 +77,50 @@ billions.
 
 ``` r
 
-measure_labels <- c(
+series_labels <- c(
   amount_allotted = "Amount allotted",
   amount_of_bids = "Bids received"
 )
 
-tender_series <- tb_issuance[
+selected <- tb_issuance[
   tb_issuance$maturity == as.Date("2029-04-21") &
-    tb_issuance$name %in% names(measure_labels) &
+    tb_issuance$name %in% names(series_labels) &
     !is.na(tb_issuance$value),
-  c("date_held", "maturity", "name", "value")
+  c("date_held", "name", "value")
 ]
 
-tender_series$measure <- factor(
-  tender_series$name,
-  levels = names(measure_labels),
-  labels = unname(measure_labels)
-)
-tender_series$value_billions <- tender_series$value / 1e9
-tender_series <- tender_series[
-  order(tender_series$measure, tender_series$date_held),
-  ,
-  drop = FALSE
-]
-
-series_preview <- utils::head(tender_series, 4)
-data.frame(
-  date_held = series_preview$date_held,
-  measure = as.character(series_preview$measure),
-  value_billions = sprintf("%.2f", series_preview$value_billions),
+chart_data <- data.frame(
+  date = selected$date_held,
+  value = selected$value / 1e9,
+  series = unname(series_labels[selected$name]),
   stringsAsFactors = FALSE
 )
-#>    date_held         measure value_billions
-#> 1 2012-10-10 Amount allotted           3.26
-#> 2 2013-04-10 Amount allotted           0.64
-#> 3 2013-05-08 Amount allotted           0.60
-#> 4 2013-06-19 Amount allotted           0.70
+chart_data <- chart_data[order(chart_data$series, chart_data$date), ]
+utils::head(chart_data, 4)
+#>         date value          series
+#> 1 2012-10-10  3.26 Amount allotted
+#> 2 2013-04-10  0.64 Amount allotted
+#> 4 2013-05-08  0.60 Amount allotted
+#> 6 2013-06-19  0.70 Amount allotted
 ```
 
 ``` r
 
 if (requireNamespace("ggplot2", quietly = TRUE)) {
-  tender_plot <- ggplot2::ggplot(
-    tender_series,
-    ggplot2::aes(
-      x = date_held,
-      y = value_billions,
-      colour = measure,
-      group = measure
-    )
+  ggplot2::ggplot(
+    chart_data,
+    ggplot2::aes(x = date, y = value, colour = series, group = series)
   ) +
-    ggplot2::geom_line(linewidth = 0.75) +
-    ggplot2::geom_point(size = 1.25) +
-    ggplot2::scale_colour_manual(values = c("#0072B2", "#D55E00")) +
+    ggplot2::geom_line() +
     ggplot2::labs(
       title = "Treasury Bond tender bids and allotments",
-      subtitle = "21 April 2029 maturity, packaged AOFM snapshot",
+      subtitle = "Published tender observations for the 21 April 2029 maturity",
       x = "Tender date",
       y = "A$ billions",
-      colour = NULL,
-      caption = paste(
-        "Source: Australian Office of Financial Management (AOFM),",
-        "Data Hub."
-      )
+      colour = "Measure",
+      caption = "Source: Australian Office of Financial Management Data Hub"
     ) +
-    ggplot2::theme_minimal(base_size = 11) +
-    ggplot2::theme(
-      legend.position = "bottom",
-      legend.justification = "left",
-      panel.grid.minor = ggplot2::element_blank(),
-      plot.caption = ggplot2::element_text(hjust = 0, size = 8)
-    )
-
-  tender_plot
+    ggplot2::theme_minimal(base_size = 13)
 }
 ```
 
