@@ -17,7 +17,7 @@ to read_aofm()."><meta name="google-site-verification" content="0UYFbCWPcIUQS3dc
 
     <a class="navbar-brand me-2" href="../index.html">readAOFM</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,7 +54,14 @@ to <code><a href="read_aofm.html">read_aofm()</a></code>.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">search_aofm</span><span class="op">(</span><span class="va">query</span>, read <span class="op">=</span> <span class="cn">FALSE</span>, csv <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">search_aofm</span><span class="op">(</span></span>
+<span>  <span class="va">query</span>,</span>
+<span>  read <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  csv <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  timeout <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"readAOFM.search_timeout"</span>, <span class="fl">3</span><span class="op">)</span>,</span>
+<span>  retries <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"readAOFM.search_retries"</span>, <span class="fl">0L</span><span class="op">)</span>,</span>
+<span>  max_bytes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"readAOFM.max_bytes"</span>, <span class="fl">100</span> <span class="op">*</span> <span class="fl">1024</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -76,6 +83,25 @@ If <code>TRUE</code>, read each matching table and return the parsed result.</p>
 option to <code><a href="read_aofm.html">read_aofm()</a></code> so parsed CSVs are written below <code>output/</code> in the
 current working directory. It has no effect when <code>read = FALSE</code>.</p></dd>
 
+
+<dt id="arg-timeout">timeout<a class="anchor" aria-label="anchor" href="#arg-timeout"></a></dt>
+<dd><p>Positive finite numeric scalar giving the per-attempt timeout
+used for <code>read = TRUE</code> (default
+<code>getOption("readAOFM.search_timeout", 3)</code> seconds; maximum 300 seconds).
+Search itself is offline, but the value is still validated on every call.</p></dd>
+
+
+<dt id="arg-retries">retries<a class="anchor" aria-label="anchor" href="#arg-retries"></a></dt>
+<dd><p>Non-negative integer scalar giving retries after the first
+attempt when <code>read = TRUE</code> (default
+<code>getOption("readAOFM.search_retries", 0L)</code>; maximum 5).</p></dd>
+
+
+<dt id="arg-max-bytes">max_bytes<a class="anchor" aria-label="anchor" href="#arg-max-bytes"></a></dt>
+<dd><p>Positive finite numeric scalar giving the maximum accepted
+workbook size when <code>read = TRUE</code> (default
+<code>getOption("readAOFM.max_bytes", 100 * 1024^2)</code>; maximum 1 GiB).</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -91,12 +117,15 @@ error before any download.</p>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>With <code>read = TRUE</code>, each match is immediately passed to <code><a href="read_aofm.html">read_aofm()</a></code> and
 therefore requires an HTTPS request for every selected workbook. The
-package does not require credentials and the reader does not keep a
-persistent cache.</p>
+package does not require credentials; the reader stages workbooks in
+temporary files and does not use the managed cache unless the caller chooses
+<code><a href="download_aofm_file.html">download_aofm_file()</a></code> explicitly.</p>
 <p>Invalid queries (non-character, length other than one, <code>NA</code>, or blank after
-trimming) throw an error. Search results are deterministic for a fixed
-catalogue, but parsed values and available source files depend on the live
-AOFM workbooks.</p>
+trimming), invalid logical flags, or invalid transport bounds throw an
+error. Search results are deterministic for a fixed local catalogue and do
+not create files. With <code>read = TRUE</code>, <code>csv = TRUE</code> writes parsed results
+beneath <code>output/</code> in the current working directory; parsed values and
+available source files depend on the live AOFM workbooks.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

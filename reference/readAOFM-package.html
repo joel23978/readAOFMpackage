@@ -3,15 +3,19 @@
 published by the Australian Office of Financial Management (AOFM). Users can
 discover supported tables with search_aofm(), retrieve and parse one or
 more tables with read_aofm(), use a family-specific reader when needed, or
-save raw workbooks with download_aofm_xlsx(). Parsed results are returned
-in long-form data frames or named lists of data frames, depending on the
-workbook family."><meta property="og:description" content="readAOFM provides a reproducible, table-oriented interface to workbooks
+save raw workbooks with download_aofm_xlsx(). The opt-in managed workflow
+download_aofm_file() verifies and retains one workbook in a bounded,
+content-addressed cache; read_aofm_file() parses a retained local file
+without another network request. Parsed results are returned in long-form
+data frames or named lists of data frames, depending on the workbook family."><meta property="og:description" content="readAOFM provides a reproducible, table-oriented interface to workbooks
 published by the Australian Office of Financial Management (AOFM). Users can
 discover supported tables with search_aofm(), retrieve and parse one or
 more tables with read_aofm(), use a family-specific reader when needed, or
-save raw workbooks with download_aofm_xlsx(). Parsed results are returned
-in long-form data frames or named lists of data frames, depending on the
-workbook family."><meta name="google-site-verification" content="0UYFbCWPcIUQS3dci9qmQqKvSXMaS8jTuulSx_dipoU"></head><body>
+save raw workbooks with download_aofm_xlsx(). The opt-in managed workflow
+download_aofm_file() verifies and retains one workbook in a bounded,
+content-addressed cache; read_aofm_file() parses a retained local file
+without another network request. Parsed results are returned in long-form
+data frames or named lists of data frames, depending on the workbook family."><meta name="google-site-verification" content="0UYFbCWPcIUQS3dci9qmQqKvSXMaS8jTuulSx_dipoU"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -19,7 +23,7 @@ workbook family."><meta name="google-site-verification" content="0UYFbCWPcIUQS3d
 
     <a class="navbar-brand me-2" href="../index.html">readAOFM</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -50,25 +54,43 @@ workbook family."><meta name="google-site-verification" content="0UYFbCWPcIUQS3d
 published by the Australian Office of Financial Management (AOFM). Users can
 discover supported tables with <code><a href="search_aofm.html">search_aofm()</a></code>, retrieve and parse one or
 more tables with <code><a href="read_aofm.html">read_aofm()</a></code>, use a family-specific reader when needed, or
-save raw workbooks with <code><a href="download_aofm_xlsx.html">download_aofm_xlsx()</a></code>. Parsed results are returned
-in long-form data frames or named lists of data frames, depending on the
-workbook family.</p>
+save raw workbooks with <code><a href="download_aofm_xlsx.html">download_aofm_xlsx()</a></code>. The opt-in managed workflow
+<code><a href="download_aofm_file.html">download_aofm_file()</a></code> verifies and retains one workbook in a bounded,
+content-addressed cache; <code><a href="read_aofm_file.html">read_aofm_file()</a></code> parses a retained local file
+without another network request. Parsed results are returned in long-form
+data frames or named lists of data frames, depending on the workbook family.</p>
     </div>
 
 
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Public AOFM workbooks are available without package credentials. Reads and
-raw downloads use HTTPS; readers stage workbooks in temporary files and
-retrieve the current source on each call. Parsed CSV output is an explicit
-opt-in side effect under <code>output/</code>; raw workbook downloads are an explicit
-operation under <code>data/</code> in the current working directory. AOFM controls the
-upstream URLs and workbook layouts, so source changes can require a package
-update.</p>
+raw downloads use HTTPS. The legacy readers stage workbooks in temporary
+files and retrieve the current source on each call. Parsed CSV output is an
+explicit opt-in side effect under <code>output/</code>; legacy raw workbook downloads
+are an explicit operation under <code>data/</code> in the current working directory.
+The managed API instead stores SHA-256-named workbooks, metadata, and locks
+under caller-selected <code>.readAOFM/data/&lt;table_id&gt;/</code> and prunes entries using
+explicit age/count/byte bounds. It never writes to a package installation;
+callers choose whether a cache root is temporary or persistent.</p>
+<p>AOFM secondary-market turnover uses separate historical and redesigned
+current workbooks. <code><a href="read_secondary.html">read_secondary()</a></code> joins both official sources into a
+continuous result across the December 2025/January 2026 boundary, retains
+their source-specific monthly/quarterly observation granularity, and records
+both workbook hashes in provenance. AOFM publishes current updates quarterly
+with a two-month lag.</p>
+<p>Package code is distributed under the MIT licence with copyright attributed
+to Joel F. AOFM source data, publications, workbook structure, and any
+bundled snapshots remain subject to their original publisher terms and
+attribution; using this package does not imply AOFM endorsement. Consult
+<code><a href="aofm_file_metadata.html">aofm_file_metadata()</a></code> and the packaged provenance notes when retaining a
+source workbook.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="search_aofm.html">search_aofm()</a></code>, <code><a href="read_aofm.html">read_aofm()</a></code>, and <code><a href="download_aofm_xlsx.html">download_aofm_xlsx()</a></code></p></div>
+    <div class="dont-index"><p><code><a href="search_aofm.html">search_aofm()</a></code>, <code><a href="read_aofm.html">read_aofm()</a></code>, <code><a href="download_aofm_xlsx.html">download_aofm_xlsx()</a></code>,
+<code><a href="aofm_catalog.html">aofm_catalog()</a></code>, <code><a href="download_aofm_file.html">download_aofm_file()</a></code>, <code><a href="aofm_file_metadata.html">aofm_file_metadata()</a></code>, and
+<code><a href="read_aofm_file.html">read_aofm_file()</a></code></p></div>
     </div>
     <div class="section level2">
     <h2 id="author">Author<a class="anchor" aria-label="anchor" href="#author"></a></h2>

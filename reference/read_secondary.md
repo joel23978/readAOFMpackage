@@ -1,15 +1,25 @@
 # Read AOFM secondary-market turnover
 
-`read_secondary()` combines the tenor and investor-type worksheets from
-a Treasury Bond or Treasury Indexed Bond turnover workbook. The workbook
-is fetched over HTTPS without credentials and staged in a temporary
-file; the package does not maintain a persistent cache. The package-wide
-bounded timeout and size safeguards are applied.
+`read_secondary()` downloads and parses both official turnover sources
+for Treasury Bonds or Treasury Indexed Bonds. It retains the historical
+`tenor` and `investor_type` groups, adds the redesigned current
+`security`, `region`, and `counterparty` groups, and returns one
+continuous result. Workbooks are fetched over HTTPS without credentials
+and staged in temporary files; the package does not use the managed
+cache unless
+[`download_aofm_file()`](https://joel23978.github.io/readAOFM/reference/download_aofm_file.md)
+is called explicitly.
 
 ## Usage
 
 ``` r
-read_secondary(aofm_table, csv = FALSE)
+read_secondary(
+  aofm_table,
+  csv = FALSE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 ```
 
 ## Arguments
@@ -25,16 +35,44 @@ read_secondary(aofm_table, csv = FALSE)
   Logical scalar (default `FALSE`). If `TRUE`, write the parsed result
   to `output/<aofm_table>.csv` beneath the current working directory.
 
+- timeout:
+
+  Positive finite numeric scalar giving the per-attempt workbook
+  transport timeout in seconds (default
+  `getOption("readAOFM.timeout", 30)`; maximum 300 seconds).
+
+- retries:
+
+  Non-negative integer scalar giving the number of retries after the
+  first workbook transport attempt (default
+  `getOption("readAOFM.retries", 1L)`; maximum 5).
+
+- max_bytes:
+
+  Positive finite numeric scalar giving the maximum accepted workbook
+  size in bytes (default
+  `getOption("readAOFM.max_bytes", 100 * 1024^2)`; maximum 1 GiB).
+
 ## Value
 
-A tibble/data frame in long form with `period` as a `Date`, `group`
-equal to `tenor` or `investor_type`, and `name`/`value` columns for the
-turnover measures. Exact measure columns follow the current workbook.
+A tibble/data frame in long form with `period` as a `Date`, `group` in
+`tenor`, `investor_type`, `security`, `region`, or `counterparty`, and
+`name`/`value` columns for numeric turnover measures. Rows are ordered
+by the natural key `period`, `group`, and `name`. Attribute
+`aofm_sources` is a two-record named list with `historical` and
+`current` records. Each record includes `schema_version`, `table_id`,
+`role`, `source_url`, URL-decoded `source_filename`, `raw_sha256`,
+`raw_bytes`, and UTC `retrieved_at`.
 
 ## Details
 
-AOFM publishes turnover quarterly with a reporting lag. Missing sheets,
-periods, or changed workbook layouts cause an error.
+The historical workbooks cover July 2016 through December 2025. Their
+`By Tenor` observations are monthly and `By Category` observations are
+quarterly. Redesigned current workbooks begin with monthly January 2026
+observations. AOFM publishes updates quarterly with a two-month lag. The
+sources are joined on `period`, `group`, and `name`; current-source rows
+take precedence on an overlap and duplicate natural keys cause an error.
+Missing sheets, periods, or changed workbook layouts also error.
 
 ## See also
 

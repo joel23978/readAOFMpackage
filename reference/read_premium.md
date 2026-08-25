@@ -3,13 +3,19 @@
 `read_premium()` downloads the `termpremium` workbook and combines its
 two source worksheets into a date-sorted long-form result. The source is
 fetched over HTTPS without credentials and staged in a temporary file;
-no persistent package cache is used. The package-wide bounded timeout
-and size safeguards are applied.
+no managed cache is used. The public timeout, retry, and workbook-size
+safeguards are applied.
 
 ## Usage
 
 ``` r
-read_premium(aofm_table, csv = FALSE)
+read_premium(
+  aofm_table,
+  csv = FALSE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 ```
 
 ## Arguments
@@ -24,6 +30,24 @@ read_premium(aofm_table, csv = FALSE)
 
   Logical scalar (default `FALSE`). If `TRUE`, write the parsed result
   to `output/termpremium.csv` beneath the current working directory.
+
+- timeout:
+
+  Positive finite numeric scalar giving the per-attempt workbook
+  transport timeout in seconds (default
+  `getOption("readAOFM.timeout", 30)`; maximum 300 seconds).
+
+- retries:
+
+  Non-negative integer scalar giving the number of retries after the
+  first workbook transport attempt (default
+  `getOption("readAOFM.retries", 1L)`; maximum 5).
+
+- max_bytes:
+
+  Positive finite numeric scalar giving the maximum accepted workbook
+  size in bytes (default
+  `getOption("readAOFM.max_bytes", 100 * 1024^2)`; maximum 1 GiB).
 
 ## Value
 

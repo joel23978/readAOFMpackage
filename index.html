@@ -23,7 +23,7 @@
 
     <a class="navbar-brand me-2" href="index.html">readAOFM</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -83,7 +83,7 @@
 <p>The catalogue result points to the public retrieval call below. It downloads the current Treasury Bond issuance workbook over HTTPS and runs the package’s transactional parser:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tb_issuance</span> <span class="op">&lt;-</span> <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/read_aofm.html">read_aofm</a></span><span class="op">(</span><span class="st">"tb"</span>, <span class="st">"issuance"</span><span class="op">)</span></span></code></pre></div>
-<p>For a deterministic README and CRAN build, the rendered output below runs that same public dispatcher and parser against the installed <code>tb_issuance.xlsx</code> snapshot. The snapshot is an official AOFM workbook from <a href="https://www.aofm.gov.au/media/591" class="external-link">AOFM media/591</a>; its SHA-256 and provenance are recorded with the <a href="https://github.com/joel23978/readAOFM/blob/main/inst/extdata/README.md" class="external-link">packaged snapshots</a>. A normal user call uses the current live workbook instead.</p>
+<p>For a deterministic README and CRAN build, the rendered output below runs that same public dispatcher and parser against the installed <code>tb_issuance.xlsx</code> snapshot. The snapshot was originally acquired as AOFM media item 591; that historical acquisition identifier, SHA-256, and provenance are recorded with the <a href="https://github.com/joel23978/readAOFM/blob/main/inst/extdata/README.md" class="external-link">packaged snapshots</a>. It is not the package’s live route: normal user calls use the current direct HTTPS Data Hub workbook route from the local catalogue.</p>
 <p>The parsed table is long-form: <code>date_held</code> and <code>maturity</code> are <code>Date</code> columns, <code>name</code> identifies the measure, and numeric observations are in <code>value</code>. This base-R filter selects bids and allotments for a long-running bond maturity and expresses the source values in A$ billions.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">series_labels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
@@ -130,11 +130,12 @@
 <span><span class="op">}</span></span></code></pre></div>
 <p><img src="reference/figures/retrieve-chart-1.png" alt="Line chart of bids received and amounts allotted at Australian Treasury Bond tenders for the 21 April 2029 maturity, from 2012 to 2025."></p>
 <p>The <a href="https://github.com/joel23978/readAOFM/blob/main/vignettes/getting-started.Rmd" class="external-link">Getting Started article</a> expands this workflow and explains the return contract. <code><a href="reference/read_aofm.html">read_aofm()</a></code> returns one parsed object for a single match and a named list when selectors match several tables. Start with a specific pair before requesting a whole family.</p>
+<p>Version 0.1.1 records two intentional source-shape corrections alongside the route update: <code><a href="reference/read_eom.html">read_eom()</a></code> preserves the current non-Notes worksheet components (including <code>Tenor</code> and <code>Series</code> where supplied), and syndication measures are returned with numeric values. Existing selectors remain valid; inspect names and classes when combining results from different AOFM workbook families.</p>
 </div>
 <div class="section level2">
 <h2 id="supported-aofm-data">Supported AOFM data<a class="anchor" aria-label="anchor" href="#supported-aofm-data"></a>
 </h2>
-<p>The current catalogue contains 23 parsed tables. These table IDs are stable catalogue identifiers; the public <code><a href="reference/read_aofm.html">read_aofm()</a></code> interface normally uses their <code>security</code> and <code>type</code> selectors.</p>
+<p>The runtime catalogue contains 30 stable table IDs: 23 parser-supported tables and seven raw-only/unsupported rows retained for direct workbook access. The public <code><a href="reference/read_aofm.html">read_aofm()</a></code> interface normally uses the supported rows’ <code>security</code> and <code>type</code> selectors. <code>aofm_catalog(include_unsupported = TRUE)</code> exposes the full 30-row map, including each direct HTTPS source route, its filename, and its support status. <code>portfolio_overview</code> is the one raw-only historical direct workbook that is not currently listed on the Data Hub; the catalogue preserves that scope rather than implying parser support.</p>
 <table class="table">
 <colgroup>
 <col width="33%">
@@ -220,8 +221,13 @@
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/search_aofm.html">search_aofm</a></span><span class="op">(</span><span class="st">"issuance"</span><span class="op">)</span></span>
 <span><span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/search_aofm.html">search_aofm</a></span><span class="op">(</span><span class="st">"treasury bond"</span><span class="op">)</span></span></code></pre></div>
-<p>Most parsed frames are long, retain source identifiers, and expose <code>name</code> and <code>value</code> measurement columns. Dates handled by a reader are returned as <code>Date</code> objects. Inspect the actual workbook-derived columns before writing analysis code:</p>
+<p>For stable IDs, inspect the complete offline catalogue before choosing a download workflow:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/aofm_catalog.html">aofm_catalog</a></span><span class="op">(</span>include_unsupported <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">[</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"table_id"</span>, <span class="st">"source_url"</span>, <span class="st">"file_name"</span>, <span class="st">"supported"</span><span class="op">)</span></span>
+<span><span class="op">]</span></span></code></pre></div>
+<p>Most parsed frames are long, retain source identifiers, and expose <code>name</code> and <code>value</code> measurement columns. Dates handled by a reader are returned as <code>Date</code> objects. Inspect the actual workbook-derived columns before writing analysis code:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">tb_issuance</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">tb_issuance</span><span class="op">)</span></span></code></pre></div>
 <p>EOM and ownership readers return named lists; inspect both levels with <code>names(result)</code> and <code>names(result[[1]])</code>.</p>
@@ -229,7 +235,7 @@
 <h3 id="csv-and-raw-workbook-output">CSV and raw workbook output<a class="anchor" aria-label="anchor" href="#csv-and-raw-workbook-output"></a>
 </h3>
 <p><code>csv = TRUE</code> keeps returning the parsed object and additionally writes under <code>output/</code> relative to the current working directory. The <code><a href="reference/download_aofm_xlsx.html">download_aofm_xlsx()</a></code> helper saves raw workbooks under <code>data/</code> and prints selected table IDs.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Run in a project directory where writing is intentional:</span></span>
 <span><span class="co"># x &lt;- readAOFM::read_aofm("tb", "issuance", csv = TRUE)</span></span>
 <span><span class="co"># file.exists(file.path("output", "tb_issuance.csv"))</span></span>
@@ -237,6 +243,22 @@
 <span><span class="co"># readAOFM::download_aofm_xlsx("tb", "issuance")</span></span>
 <span><span class="co"># file.exists(file.path("data", "tb_issuance.xlsx"))</span></span></code></pre></div>
 <p>Transactional, syndication, secondary, and premium readers use <code>output/&lt;table-id&gt;.csv</code>; EOFY, EOM, and ownership readers may write one file per workbook sheet.</p>
+<p>For a caller-managed, verified local copy, use the opt-in integration API:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">cache_root</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"readAOFM-cache-"</span><span class="op">)</span></span>
+<span><span class="va">workbook</span> <span class="op">&lt;-</span> <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/download_aofm_file.html">download_aofm_file</a></span><span class="op">(</span></span>
+<span>  <span class="st">"tb_issuance"</span>, path <span class="op">=</span> <span class="va">cache_root</span>, overwrite <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  timeout <span class="op">=</span> <span class="fl">5</span>, retries <span class="op">=</span> <span class="fl">0</span>, max_bytes <span class="op">=</span> <span class="fl">50</span> <span class="op">*</span> <span class="fl">1024</span><span class="op">^</span><span class="fl">2</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/aofm_file_metadata.html">aofm_file_metadata</a></span><span class="op">(</span><span class="va">workbook</span><span class="op">)</span></span>
+<span><span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="reference/read_aofm_file.html">read_aofm_file</a></span><span class="op">(</span><span class="va">workbook</span>, <span class="st">"tb_issuance"</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="reference/download_aofm_file.html">download_aofm_file()</a></code> stores a SHA-256-named workbook, metadata, and a short-lived writer lock below the caller’s <code>.readAOFM/data/&lt;table-id&gt;/</code> directory, then prunes entries using its age, count, and byte limits. The returned path carries the verified source and digest metadata. This managed cache is explicit and caller-owned; it is separate from the readers’ temporary staging and from the legacy <code>data/</code> and <code>output/</code> side effects. Use <code><a href="reference/aofm_file_metadata.html">aofm_file_metadata()</a></code> and <code><a href="reference/read_aofm_file.html">read_aofm_file()</a></code> for offline provenance and local parsing without another network request.</p>
+</div>
+<div class="section level3">
+<h3 id="turnover-across-the-aofm-source-transition">Turnover across the AOFM source transition<a class="anchor" aria-label="anchor" href="#turnover-across-the-aofm-source-transition"></a>
+</h3>
+<p><code>read_secondary("tb_turnover")</code> and <code>read_secondary("tib_turnover")</code> join the historical and redesigned current workbooks into one series. The historical companions cover July 2016 through December 2025; the redesigned current workbooks provide January 2026 onward. The transition has no December-to-January gap. Current workbooks contain monthly observation periods, while AOFM updates the Data Hub quarterly with an approximately two-month lag. Historical turnover has source-specific granularity: <strong>By Tenor</strong> is monthly and <strong>By Category</strong> is quarterly. Current sheets cover <code>security</code>, <code>region</code>, and <code>counterparty</code>; the combined result uses the groups <code>tenor</code>, <code>investor_type</code>, <code>security</code>, <code>region</code>, and <code>counterparty</code>.</p>
+<p>Rows are joined by the natural key <code>period</code>, <code>group</code>, and <code>name</code>. If sources overlap, the current workbook takes precedence; duplicate keys within a source are rejected. The returned data frame has an <code>aofm_sources</code> attribute containing the historical/current source URLs, roles, filenames, byte counts, and SHA-256 digests. The <a href="https://www.aofm.gov.au/data-hub" class="external-link">AOFM Data Hub</a> is the primary source; exact route and boundary evidence is kept in the package file <code>inst/extdata/README-aofm-route-continuity.md</code>.</p>
 </div>
 </div>
 <div class="section level2">
@@ -246,9 +268,11 @@
 <li>
 <code>search_aofm(query)</code> with <code>read = FALSE</code> is local and network-free.</li>
 <li>Readers and <code>search_aofm(..., read = TRUE)</code> fetch public AOFM workbooks over HTTPS.</li>
-<li>Downloads use a 15-second connection timeout, a 120-second transfer limit, a low-speed abort after 30 seconds below 1 KiB/s, and a 100 MiB file limit.</li>
+<li>Downloads use a 30-second per-attempt timeout by default, retry once, and reject workbooks larger than 100 MiB by default. Set <code>timeout</code>, <code>retries</code>, and <code>max_bytes</code> on public readers/downloaders to apply tighter bounds.</li>
 <li>Public AOFM workbooks are available without a package username, password, or API key.</li>
-<li>Readers stage each workbook in a temporary file and fetch the current source on each call; repeating a read can therefore return a newer workbook.</li>
+<li>Readers stage each workbook in a temporary file and fetch the current source on each call; repeating a read can therefore return a newer workbook. They do not create a persistent package cache.</li>
+<li>
+<code><a href="reference/download_aofm_file.html">download_aofm_file()</a></code> is the opt-in managed cache API. It uses a caller- selected root (default <code><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir()</a></code>), writes only beneath <code>.readAOFM/data/&lt;table-id&gt;/</code>, and exposes bounded pruning and provenance metadata. It never writes to the package installation or global workspace.</li>
 <li>
 <code>csv = TRUE</code> writes to <code>output/</code> and <code><a href="reference/download_aofm_xlsx.html">download_aofm_xlsx()</a></code> writes to <code>data/</code> relative to the current working directory.</li>
 </ul>
@@ -256,9 +280,9 @@
 <div class="section level2">
 <h2 id="scope-and-limitations">Scope and limitations<a class="anchor" aria-label="anchor" href="#scope-and-limitations"></a>
 </h2>
-<p>The parser-supported catalogue contains the 23 tables listed above. Seven additional catalogue entries are available only through raw workbook download: <code>tb_issuance_conversion</code>, <code>indexation_factors</code>, <code>rmbs_transactions</code>, <code>rmbs_auctions</code>, <code>interest_rate_swaps</code>, <code>cross_currency_swaps</code>, and <code>portfolio_overview</code>. Their selector fields are empty, so an unfiltered <code><a href="reference/download_aofm_xlsx.html">download_aofm_xlsx()</a></code> call is the available route and also selects the rest of the catalogue. <code><a href="reference/search_aofm.html">search_aofm()</a></code> excludes these entries from its supported rows; its fallback token matching can still return a supported row for a query that contains a raw-only ID, so use the IDs shown in the returned result.</p>
+<p>The parser-supported catalogue contains the 23 tables listed above. Seven additional catalogue entries are raw-only/unsupported and available through direct raw workbook download: <code>tb_issuance_conversion</code>, <code>indexation_factors</code>, <code>rmbs_transactions</code>, <code>rmbs_auctions</code>, <code>interest_rate_swaps</code>, <code>cross_currency_swaps</code>, and <code>portfolio_overview</code>. Their selector fields are empty, so an unfiltered <code><a href="reference/download_aofm_xlsx.html">download_aofm_xlsx()</a></code> call is the available route and also selects the rest of the catalogue. <code>aofm_catalog(include_unsupported = TRUE)</code> shows their verified direct source URLs and <code>.xls</code>/<code>.xlsx</code> destination names; the extension is kept aligned for each raw-only row. <code><a href="reference/search_aofm.html">search_aofm()</a></code> excludes these entries from its supported rows; its fallback token matching can still return a supported row for a query that contains a raw-only ID, so use the IDs shown in the returned result.</p>
 <p>AOFM controls the source URLs and workbook layouts. Changed URLs, an HTML error page, network failure, or changed sheets/columns can make a read fail. The package validates HTTP responses, workbook signatures, sheet counts, and required columns and reports the table context.</p>
-<p>Public readers focus on catalogue-selected AOFM sources; they do not accept a local workbook path. Identifier columns follow each workbook family and can differ across sources. Live reads represent the current AOFM workbook rather than a versioned data snapshot, while the five packaged snapshots provide fixed inputs for documentation and tests.</p>
+<p>Public readers focus on catalogue-selected AOFM sources. Use <code><a href="reference/read_aofm_file.html">read_aofm_file()</a></code> when a local workbook path is intentional; it validates the parser-supported table ID and performs no download. Identifier columns follow each workbook family and can differ across sources. Live reads represent the current AOFM workbook rather than a versioned data snapshot, while the five packaged snapshots provide fixed inputs for documentation and tests.</p>
 <table class="table">
 <colgroup>
 <col width="50%">
@@ -289,6 +313,10 @@
 <td>Cannot create <code>data/</code> or <code>output/</code>
 </td>
 <td>Use a writable project directory, or leave <code>csv = FALSE</code> and avoid raw downloads.</td>
+</tr>
+<tr>
+<td>Managed cache cannot be written or verified</td>
+<td>Choose a caller-owned writable <code>path</code>, inspect <code><a href="reference/aofm_file_metadata.html">aofm_file_metadata()</a></code>, or parse a local workbook directly with <code><a href="reference/read_aofm_file.html">read_aofm_file()</a></code>.</td>
 </tr>
 </tbody>
 </table>

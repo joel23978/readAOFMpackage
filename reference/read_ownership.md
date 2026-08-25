@@ -3,13 +3,21 @@
 `read_ownership()` reads the public register or non-resident holdings
 workbook and returns one long-form data frame per source worksheet. It
 downloads over HTTPS without credentials and stages the workbook in a
-temporary file; the package does not maintain a persistent cache. The
-package-wide bounded timeout and size safeguards are applied.
+temporary file; the package does not use the managed cache unless
+[`download_aofm_file()`](https://joel23978.github.io/readAOFM/reference/download_aofm_file.md)
+is called explicitly. The public timeout, retry, and workbook-size
+safeguards are applied.
 
 ## Usage
 
 ``` r
-read_ownership(aofm_table, csv = FALSE)
+read_ownership(
+  aofm_table,
+  csv = FALSE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 ```
 
 ## Arguments
@@ -24,6 +32,24 @@ read_ownership(aofm_table, csv = FALSE)
 
   Logical scalar (default `FALSE`). If `TRUE`, write one CSV per
   returned worksheet beneath `output/` in the current working directory.
+
+- timeout:
+
+  Positive finite numeric scalar giving the per-attempt workbook
+  transport timeout in seconds (default
+  `getOption("readAOFM.timeout", 30)`; maximum 300 seconds).
+
+- retries:
+
+  Non-negative integer scalar giving the number of retries after the
+  first workbook transport attempt (default
+  `getOption("readAOFM.retries", 1L)`; maximum 5).
+
+- max_bytes:
+
+  Positive finite numeric scalar giving the maximum accepted workbook
+  size in bytes (default
+  `getOption("readAOFM.max_bytes", 100 * 1024^2)`; maximum 1 GiB).
 
 ## Value
 

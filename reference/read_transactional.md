@@ -3,15 +3,23 @@
 `read_transactional()` handles tender, buyback, retail-facility, and
 securities-lending workbooks. It downloads the selected workbook over
 HTTPS without credentials, stages it in a temporary file, and pivots
-numeric measures into long form. The package has no persistent cache and
-applies the package-wide bounded timeout and size safeguards described
-in
+numeric measures into long form. The package does not use the managed
+cache unless
+[`download_aofm_file()`](https://joel23978.github.io/readAOFM/reference/download_aofm_file.md)
+is called explicitly and applies the public bounded timeout and size
+safeguards described in
 [`read_aofm()`](https://joel23978.github.io/readAOFM/reference/read_aofm.md).
 
 ## Usage
 
 ``` r
-read_transactional(aofm_table, csv = FALSE)
+read_transactional(
+  aofm_table,
+  csv = FALSE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 ```
 
 ## Arguments
@@ -26,6 +34,24 @@ read_transactional(aofm_table, csv = FALSE)
 
   Logical scalar (default `FALSE`). If `TRUE`, write the parsed result
   to `output/<aofm_table>.csv` beneath the current working directory.
+
+- timeout:
+
+  Positive finite numeric scalar giving the per-attempt workbook
+  transport timeout in seconds (default
+  `getOption("readAOFM.timeout", 30)`; maximum 300 seconds).
+
+- retries:
+
+  Non-negative integer scalar giving the number of retries after the
+  first workbook transport attempt (default
+  `getOption("readAOFM.retries", 1L)`; maximum 5).
+
+- max_bytes:
+
+  Positive finite numeric scalar giving the maximum accepted workbook
+  size in bytes (default
+  `getOption("readAOFM.max_bytes", 100 * 1024^2)`; maximum 1 GiB).
 
 ## Value
 

@@ -6,7 +6,8 @@ parsed CSV files, while
 [`search_aofm()`](https://joel23978.github.io/readAOFM/reference/search_aofm.md)
 searches installed metadata. The examples below keep every write in an
 isolated temporary directory and use a packaged workbook snapshot for
-deterministic parsing.
+deterministic parsing. The package’s managed download API is explicit,
+so ordinary reader calls do not create a persistent cache.
 
 ## Network and staging behavior
 
@@ -41,7 +42,7 @@ repeatable and no network request is made.
 csv_probe <- with_temp_working_directory({
   parsed <- testthat::with_mocked_bindings(
     readAOFM::read_aofm("tb", "issuance", csv = TRUE),
-    download_aofm_table_workbook = function(aofm_table) {
+    download_aofm_table_workbook = function(aofm_table, ...) {
       stopifnot(identical(aofm_table, "tb_issuance"))
       tb_issuance_fixture
     },
@@ -81,7 +82,61 @@ directory. The raw helper
 [`download_aofm_xlsx()`](https://joel23978.github.io/readAOFM/reference/download_aofm_xlsx.md)
 has different behavior: it saves source workbooks beneath `data/` and is
 intended for an explicitly writable project directory. Neither output
-path is a package cache.
+path is a package cache. The public transport bounds are `timeout` (30
+seconds per attempt by default), `retries` (one retry), and `max_bytes`
+(100 MiB); pass them explicitly when a script needs tighter limits.
+
+## Managed downloads and offline parsing
+
+[`download_aofm_file()`](https://joel23978.github.io/readAOFM/reference/download_aofm_file.md)
+is the opt-in workflow for retaining a verified current workbook. It
+stores a SHA-256-named `.xls`/`.xlsx` file, `current.rds` provenance,
+and a short-lived writer lock beneath the caller’s
+`.readAOFM/data/<table-id>/` directory. Age, file-count, and total-byte
+limits prune old entries. The cache root defaults to
+[`tempdir()`](https://rdrr.io/r/base/tempfile.html) and can be set with
+the function’s `path` argument. The returned path carries source URL,
+filename, byte-count, SHA-256, retrieval time, and cache-hit metadata.
+
+[`aofm_file_metadata()`](https://joel23978.github.io/readAOFM/reference/aofm_file_metadata.md)
+computes local byte-level provenance without network or cache writes.
+[`read_aofm_file()`](https://joel23978.github.io/readAOFM/reference/read_aofm_file.md)
+parses a local workbook using the same family parser selected by its
+stable table ID. This is useful for a downloaded file or an installed
+fixture:
+
+``` r
+
+local_metadata <- readAOFM::aofm_file_metadata(
+  tb_issuance_fixture,
+  table_id = "tb_issuance"
+)
+local_parsed <- readAOFM::read_aofm_file(
+  tb_issuance_fixture,
+  table_id = "tb_issuance"
+)
+local_metadata[c("table_id", "raw_bytes", "raw_sha256")]
+#> $table_id
+#> [1] "tb_issuance"
+#> 
+#> $raw_bytes
+#> [1] 209385
+#> 
+#> $raw_sha256
+#> [1] "4f74568d37258a6fad7b80136cdd64a29341f7bfa8550d2a4d7f8cc785e2e5c9"
+utils::head(local_parsed[c("date_held", "name", "value")], 3)
+#> # A tibble: 3 × 3
+#>   date_held  name                value
+#>   <date>     <chr>               <dbl>
+#> 1 1982-08-05 coupon                 16
+#> 2 1982-08-05 amount_offered  200000000
+#> 3 1982-08-05 amount_allotted 200000000
+```
+
+The local path is not silently treated as a current source: standalone
+metadata records its local modification time and omits a source URL.
+Managed cache metadata remains qualified only while its file, digest,
+and catalogue identity agree.
 
 ## Multi-result calls and cost
 
@@ -135,9 +190,30 @@ For a live download or parse failure, check the following in order:
 5.  If a CSV or raw download cannot be written, switch to a writable
     project directory or leave `csv = FALSE`.
 
-The package does not accept a local workbook path through the public
-readers. For deterministic checks, use the packaged snapshots as above
-and keep any temporary working directory isolated from analysis outputs.
+For deterministic checks, use the packaged snapshots with
+[`read_aofm_file()`](https://joel23978.github.io/readAOFM/reference/read_aofm_file.md)
+as above and keep any temporary working directory isolated from analysis
+outputs. The legacy readers intentionally remain catalogue-first; the
+local-file API separates retrieval from parsing when a caller needs that
+control.
+
+## Turnover source transition
+
+`read_secondary("tb_turnover")` and `read_secondary("tib_turnover")`
+stitch historical companions covering July 2016 through December 2025 to
+redesigned current workbooks beginning in January 2026. Current
+workbooks contain monthly observation periods, while the Data Hub is
+updated quarterly with an approximately two-month lag. Historical **By
+Tenor** observations are monthly; historical **By Category**
+observations are quarterly. Current sheets provide `security`, `region`,
+and `counterparty`; the combined groups are `tenor`, `investor_type`,
+`security`, `region`, and `counterparty`.
+
+The natural key is `period`, `group`, and `name`. Current rows take
+precedence on overlap, duplicate keys within a source are rejected, and
+the returned data frame carries a two-record `aofm_sources` attribute
+with historical/current roles and raw SHA-256 metadata. See the
+route-continuity record for the exact source URLs and boundary evidence.
 
 ## Optional live troubleshooting probe
 

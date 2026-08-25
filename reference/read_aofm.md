@@ -5,16 +5,24 @@ the optional `security` and `type` filters to the package's supported
 AOFM table catalogue, downloads each selected workbook over HTTPS, and
 dispatches to the appropriate family reader. The package does not
 require credentials and the reader stages each workbook in a temporary
-file rather than maintaining a persistent cache. Transport is bounded
-internally with a 15-second connect timeout, a 120-second overall
-transfer limit, a 30-second low-speed abort below 1 KiB/s, and a 100 MiB
-workbook-size limit; these are implementation safeguards rather than
-public arguments.
+file rather than maintaining a managed cache. Use `timeout`, `retries`,
+and `max_bytes` to bound live transfers. For a caller-selected
+content-addressed cache, use
+[`download_aofm_file()`](https://joel23978.github.io/readAOFM/reference/download_aofm_file.md)
+and then parse the retained workbook with
+[`read_aofm_file()`](https://joel23978.github.io/readAOFM/reference/read_aofm_file.md).
 
 ## Usage
 
 ``` r
-read_aofm(security = NULL, type = NULL, csv = FALSE)
+read_aofm(
+  security = NULL,
+  type = NULL,
+  csv = FALSE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 ```
 
 ## Arguments
@@ -40,6 +48,24 @@ read_aofm(security = NULL, type = NULL, csv = FALSE)
   current working directory. For a list result, one CSV is written per
   component.
 
+- timeout:
+
+  Positive finite numeric scalar giving the per-attempt workbook
+  transport timeout in seconds (default
+  `getOption("readAOFM.timeout", 30)`; maximum 300 seconds).
+
+- retries:
+
+  Non-negative integer scalar giving the number of retries after the
+  first workbook transport attempt (default
+  `getOption("readAOFM.retries", 1L)`; maximum 5).
+
+- max_bytes:
+
+  Positive finite numeric scalar giving the maximum accepted workbook
+  size in bytes (default
+  `getOption("readAOFM.max_bytes", 100 * 1024^2)`; maximum 1 GiB).
+
 ## Value
 
 If the filters identify one table, the corresponding reader result:
@@ -51,29 +77,53 @@ has one element for each of the 23 parser-supported tables.
 
 Transactional and syndication results preserve workbook identifier
 fields and pivot measures to `name`/`value`; parsed dates are `Date`
-objects where the source provides dates. End-of-month and ownership
-readers return named lists of component data frames. Exact measure
-columns follow the current AOFM workbook and may change if AOFM changes
-its source layout.
+objects where the source provides dates. Syndication `value` is numeric.
+End-of-month results contain one named component per non-Notes worksheet
+(the current Treasury Bond/Treasury Indexed Bond workbooks include
+`FaceValue`, `MarketValue`, `Delta`, `Duration`, and `Tenor`; source
+layouts may vary). For Treasury Bond, Treasury Indexed Bond, and
+Treasury Note end-of-month outputs, each component also carries a
+`Series` identifier for repeated security identities. Ownership readers
+return named lists of component data frames. Exact measure columns
+follow the current AOFM workbook and may change if AOFM changes its
+source layout. Turnover results join the historical and redesigned
+current workbooks on `period`, `group`, and `name`, and include an
+`aofm_sources` attribute with named `historical` and `current` records
+containing source URLs, roles, table IDs, filenames, byte counts, UTC
+retrieval times, and SHA-256 hashes. Historical turnover covers July
+2016 through December 2025: `By Tenor` observations are monthly and
+`By Category` observations are quarterly. Redesigned `Security`,
+`Region`, and `Counterparty` sheets begin with monthly January 2026
+observations. AOFM publishes updates quarterly with a two-month lag.
+Current rows take precedence for an overlapping natural key, and
+duplicate `period`/`group`/`name` identities are rejected.
 
 ## Details
+
+The transport controls default to 30 seconds per attempt, one retry, and
+100 MiB through `getOption("readAOFM.timeout")`,
+`getOption("readAOFM.retries")`, and `getOption("readAOFM.max_bytes")`.
+They must be finite scalar values with `0 < timeout <= 300`, integer
+`0 <= retries <= 5`, and `0 < max_bytes <= 1 GiB`.
 
 Supported table IDs cover end-of-financial-year positions, end-of-month
 positions, Treasury Bond, Treasury Indexed Bond and Treasury Note
 transactions, syndications, buybacks, retail and securities-lending
 data, public and non-resident ownership, secondary-market turnover, and
-term premium estimates. The catalogue also contains seven historical
-files that do not have parsers; those rows are excluded here. Because
-their selector fields are empty,
+term premium estimates. The full catalogue also contains seven raw-only
+(unsupported) rows without parsers; those rows are excluded here. Use
+[`aofm_catalog()`](https://joel23978.github.io/readAOFM/reference/aofm_catalog.md)
+with `include_unsupported = TRUE` to inspect all 30 routes and
 [`download_aofm_xlsx()`](https://joel23978.github.io/readAOFM/reference/download_aofm_xlsx.md)
-includes them only in an unfiltered raw download of the full catalogue,
-not as individually selectable tables.
+for an unfiltered raw download of the full catalogue.
 
 A selection that matches no supported table throws an error. Transport
 failures, non-workbook responses, empty files, missing sheets, missing
 required columns, and incompatible upstream layouts also throw errors.
-The AOFM source is external, so examples and tests should use local
-fixtures or mocks when deterministic, offline execution is required.
+The `csv = TRUE` side effect writes parsed data under `output/` in the
+current working directory. The AOFM source is external, so examples and
+tests should use local fixtures or mocks when deterministic, offline
+execution is required.
 
 ## See also
 

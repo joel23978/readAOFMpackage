@@ -11,7 +11,14 @@ column to pass a selected table to
 ## Usage
 
 ``` r
-search_aofm(query, read = FALSE, csv = FALSE)
+search_aofm(
+  query,
+  read = FALSE,
+  csv = FALSE,
+  timeout = getOption("readAOFM.search_timeout", 3),
+  retries = getOption("readAOFM.search_retries", 0L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 ```
 
 ## Arguments
@@ -34,6 +41,25 @@ search_aofm(query, read = FALSE, csv = FALSE)
   so parsed CSVs are written below `output/` in the current working
   directory. It has no effect when `read = FALSE`.
 
+- timeout:
+
+  Positive finite numeric scalar giving the per-attempt timeout used for
+  `read = TRUE` (default `getOption("readAOFM.search_timeout", 3)`
+  seconds; maximum 300 seconds). Search itself is offline, but the value
+  is still validated on every call.
+
+- retries:
+
+  Non-negative integer scalar giving retries after the first attempt
+  when `read = TRUE` (default
+  `getOption("readAOFM.search_retries", 0L)`; maximum 5).
+
+- max_bytes:
+
+  Positive finite numeric scalar giving the maximum accepted workbook
+  size when `read = TRUE` (default
+  `getOption("readAOFM.max_bytes", 100 * 1024^2)`; maximum 1 GiB).
+
 ## Value
 
 When `read = FALSE`, a base data frame with columns `security`, `type`,
@@ -49,13 +75,19 @@ before any download.
 With `read = TRUE`, each match is immediately passed to
 [`read_aofm()`](https://joel23978.github.io/readAOFM/reference/read_aofm.md)
 and therefore requires an HTTPS request for every selected workbook. The
-package does not require credentials and the reader does not keep a
-persistent cache.
+package does not require credentials; the reader stages workbooks in
+temporary files and does not use the managed cache unless the caller
+chooses
+[`download_aofm_file()`](https://joel23978.github.io/readAOFM/reference/download_aofm_file.md)
+explicitly.
 
 Invalid queries (non-character, length other than one, `NA`, or blank
-after trimming) throw an error. Search results are deterministic for a
-fixed catalogue, but parsed values and available source files depend on
-the live AOFM workbooks.
+after trimming), invalid logical flags, or invalid transport bounds
+throw an error. Search results are deterministic for a fixed local
+catalogue and do not create files. With `read = TRUE`, `csv = TRUE`
+writes parsed results beneath `output/` in the current working
+directory; parsed values and available source files depend on the live
+AOFM workbooks.
 
 ## See also
 

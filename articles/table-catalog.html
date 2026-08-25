@@ -21,7 +21,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">readAOFM</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -60,11 +60,11 @@
     
     
 <p><code>readAOFM</code> ships a local catalogue that maps AOFM Data Hub
-workbooks to search terms, public selectors, and parser families. This
-article records the 23 parser-supported entries and the seven historical
-entries available through raw workbook download. Reader calls retrieve
-current source workbooks; the catalogue itself supplies stable discovery
-metadata.</p>
+workbooks to search terms, public selectors, parser families, and direct
+HTTPS source routes. This article records the 23 parser-supported
+entries and the seven raw-only / unsupported entries available through
+raw workbook download. Reader calls retrieve current source workbooks;
+the catalogue itself supplies stable, offline discovery metadata.</p>
 <div class="section level2">
 <h2 id="the-23-parsed-tables">The 23 parsed tables<a class="anchor" aria-label="anchor" href="#the-23-parsed-tables"></a>
 </h2>
@@ -214,11 +214,12 @@ calls are local and return metadata only because
 <span><span class="co">#&gt; 2 tib_turnover read_aofm("tib", "turnover")</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="raw-workbook-catalogue-entries">Raw-workbook catalogue entries<a class="anchor" aria-label="anchor" href="#raw-workbook-catalogue-entries"></a>
+<h2 id="raw-only-workbook-catalogue-entries">Raw-only workbook catalogue entries<a class="anchor" aria-label="anchor" href="#raw-only-workbook-catalogue-entries"></a>
 </h2>
 <p>The following seven catalogue IDs are available through the raw
 workbook download path while the parser-supported workflow focuses on
-the 23 entries above:</p>
+the 23 entries above. They remain explicit catalogue rows with
+<code>supported = FALSE</code>, not additional parser families:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">raw_only_ids</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  <span class="st">"tb_issuance_conversion"</span>,</span>
@@ -253,6 +254,46 @@ the 23 entries above:</p>
 <span><span class="co">#&gt; 5    interest_rate_swaps   &lt;NA&gt; download_aofm_xlsx()</span></span>
 <span><span class="co">#&gt; 6   cross_currency_swaps   &lt;NA&gt; download_aofm_xlsx()</span></span>
 <span><span class="co">#&gt; 7     portfolio_overview   &lt;NA&gt; download_aofm_xlsx()</span></span></code></pre></div>
+<p>The complete map is available without contacting AOFM:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">all_catalogue</span> <span class="op">&lt;-</span> <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="../reference/aofm_catalog.html">aofm_catalog</a></span><span class="op">(</span>include_unsupported <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">all_catalogue</span><span class="op">)</span> <span class="op">==</span> <span class="fl">30L</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">all_catalogue</span><span class="op">$</span><span class="va">supported</span><span class="op">)</span> <span class="op">==</span> <span class="fl">23L</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"^https://www\\.aofm\\.gov\\.au/sites/default/files/"</span>, <span class="va">all_catalogue</span><span class="op">$</span><span class="va">source_url</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"/media/"</span>, <span class="va">all_catalogue</span><span class="op">$</span><span class="va">source_url</span>, fixed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">all_catalogue</span><span class="op">[</span><span class="op">!</span><span class="va">all_catalogue</span><span class="op">$</span><span class="va">supported</span>,</span>
+<span>              <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"table_id"</span>, <span class="st">"source_url"</span>, <span class="st">"file_name"</span>, <span class="st">"supported"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;                  table_id</span></span>
+<span><span class="co">#&gt; 11 tb_issuance_conversion</span></span>
+<span><span class="co">#&gt; 25     indexation_factors</span></span>
+<span><span class="co">#&gt; 26      rmbs_transactions</span></span>
+<span><span class="co">#&gt; 27          rmbs_auctions</span></span>
+<span><span class="co">#&gt; 28    interest_rate_swaps</span></span>
+<span><span class="co">#&gt; 29   cross_currency_swaps</span></span>
+<span><span class="co">#&gt; 30     portfolio_overview</span></span>
+<span><span class="co">#&gt;                                                                                                           source_url</span></span>
+<span><span class="co">#&gt; 11      https://www.aofm.gov.au/sites/default/files/2025-06-06/treasury%20bonds%20-%20conversion%20and%20switch.xlsx</span></span>
+<span><span class="co">#&gt; 25         https://www.aofm.gov.au/sites/default/files/2025-05-02/treasury_indexed_bonds_-_indexation_factors_1.xlsx</span></span>
+<span><span class="co">#&gt; 26                                 https://www.aofm.gov.au/sites/default/files/2025-05-02/rmbs_-_transactions_0.xlsx</span></span>
+<span><span class="co">#&gt; 27                                https://www.aofm.gov.au/sites/default/files/2025-05-02/rmbs_-_auction_results.xlsx</span></span>
+<span><span class="co">#&gt; 28               https://www.aofm.gov.au/sites/default/files/2025-05-02/interest_rate_swaps_-_australian_dollar.xlsx</span></span>
+<span><span class="co">#&gt; 29                  https://www.aofm.gov.au/sites/default/files/2025-05-02/interest_rate_swaps_-_cross_currency.xlsx</span></span>
+<span><span class="co">#&gt; 30 https://www.aofm.gov.au/sites/default/files/2019-06/australian_government_securities_on_issue_-_1983_to_2002.xlsx</span></span>
+<span><span class="co">#&gt;                      file_name supported</span></span>
+<span><span class="co">#&gt; 11 tb_issuance_conversion.xlsx     FALSE</span></span>
+<span><span class="co">#&gt; 25     indexation_factors.xlsx     FALSE</span></span>
+<span><span class="co">#&gt; 26      rmbs_transactions.xlsx     FALSE</span></span>
+<span><span class="co">#&gt; 27          rmbs_auctions.xlsx     FALSE</span></span>
+<span><span class="co">#&gt; 28    interest_rate_swaps.xlsx     FALSE</span></span>
+<span><span class="co">#&gt; 29   cross_currency_swaps.xlsx     FALSE</span></span>
+<span><span class="co">#&gt; 30     portfolio_overview.xlsx     FALSE</span></span></code></pre></div>
+<p>The raw-only source filenames remain extension-compatible with their
+direct routes, including the legacy <code>.xls</code> files.
+<code>portfolio_overview</code> is a verified historical direct workbook
+that is not currently listed on the Data Hub; it is retained as raw-only
+and is not presented as current or parser-supported.</p>
 <p><code><a href="../reference/download_aofm_xlsx.html">download_aofm_xlsx()</a></code> is the public raw-workbook helper.
 Its selectors are the <code>security</code> and <code>type</code> values
 shown for parsed rows. The raw-only rows have no parser and no public
@@ -271,16 +312,39 @@ local discovery. Reader and raw download calls request the workbook URL
 recorded in the package catalogue over HTTPS, stage it in a temporary
 file (readers), or save it beneath <code>data/</code> (raw downloads).
 Each call retrieves the current source rather than using a persistent
-package cache.</p>
-<p>AOFM controls workbook URLs, publication cadence, sheet names,
-columns, and historical coverage. For example, turnover is published
-quarterly with a reporting lag, while several raw-only datasets are
-historical. A changed URL, HTML error page, unavailable source, or
-changed workbook layout can therefore make a read fail. Use the table
-ID, selector, error text, and access date when reporting a source
-change. The packaged workbook snapshots used by tests and vignettes are
-deterministic examples, not a replacement for the live AOFM source or a
-runtime cache.</p>
+package cache. The opt-in <code><a href="../reference/download_aofm_file.html">download_aofm_file()</a></code> API instead
+keeps a verified, content-addressed workbook and metadata beneath the
+caller-selected <code>.readAOFM/data/&lt;table-id&gt;/</code> root;
+<code><a href="../reference/aofm_file_metadata.html">aofm_file_metadata()</a></code> and <code><a href="../reference/read_aofm_file.html">read_aofm_file()</a></code>
+inspect and parse local files without network access.</p>
+<p>Readers and raw downloads accept <code>timeout</code>,
+<code>retries</code>, and <code>max_bytes</code> controls (30 seconds,
+one retry, and 100 MiB by default). Managed downloads additionally bound
+cache age, file count, total bytes, and lock wait time. These controls
+keep network and filesystem work explicit and finite for scripts, tests,
+and CRAN builds.</p>
+<p>AOFM controls workbook URLs, sheet names, columns, and historical
+coverage. Turnover observation periods and publication cadence are
+separate: current turnover workbooks contain monthly observations, the
+Data Hub update is quarterly with an approximately two-month lag,
+historical <strong>By Tenor</strong> is monthly, and historical
+<strong>By Category</strong> is quarterly. The historical turnover
+companions end in December 2025 and the redesigned current workbooks
+begin in January 2026. <code><a href="../reference/read_secondary.html">read_secondary()</a></code> joins them by
+<code>period</code>, <code>group</code>, and <code>name</code>, uses
+current rows for overlaps, rejects duplicate keys, and attaches the two
+source records as <code>aofm_sources</code>. The groups are
+<code>tenor</code>, <code>investor_type</code>, <code>security</code>,
+<code>region</code>, and <code>counterparty</code>.</p>
+<p>The continuity CSV retains <code>legacy_max = 2024-12-31</code> as
+the boundary of the pinned retired-baseline comparison. The replacement
+historical workbook extends through <code>2025-12-31</code>; together
+with the current <code>2026-01-31</code> onward workbook it provides the
+documented no-gap transition. The packaged workbook snapshots used by
+tests and vignettes are deterministic examples, not a replacement for
+the live AOFM source or a runtime cache. A changed URL, HTML error page,
+unavailable source, or changed workbook layout can therefore make a read
+fail; report the table ID, selector, error text, and access date.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

@@ -3,16 +3,22 @@
 `read_eofy()` downloads the `summary` workbook from the AOFM Data Hub
 and tidies its first worksheet into long form. The source is fetched
 over HTTPS without credentials and staged in a temporary file; the
-package does not maintain a persistent cache. Transport is bounded
-internally with a 15-second connect timeout, a 120-second overall
-transfer limit, a 30-second low-speed abort below 1 KiB/s, and a 100 MiB
-workbook-size limit; these are not public arguments. A changed workbook
-layout or missing required columns causes an error.
+package does not use the managed cache unless
+[`download_aofm_file()`](https://joel23978.github.io/readAOFM/reference/download_aofm_file.md)
+is called explicitly. Transport is bounded by the public `timeout`,
+`retries`, and `max_bytes` arguments. A changed workbook layout or
+missing required columns causes an error.
 
 ## Usage
 
 ``` r
-read_eofy(aofm_table, csv = FALSE)
+read_eofy(
+  aofm_table,
+  csv = FALSE,
+  timeout = getOption("readAOFM.timeout", 30),
+  retries = getOption("readAOFM.retries", 1L),
+  max_bytes = getOption("readAOFM.max_bytes", 100 * 1024^2)
+)
 ```
 
 ## Arguments
@@ -28,6 +34,24 @@ read_eofy(aofm_table, csv = FALSE)
   Logical scalar (default `FALSE`). If `TRUE`, also write the parsed
   data to `output/eofy_executive_summary.csv` beneath the current
   working directory.
+
+- timeout:
+
+  Positive finite numeric scalar giving the per-attempt workbook
+  transport timeout in seconds (default
+  `getOption("readAOFM.timeout", 30)`; maximum 300 seconds).
+
+- retries:
+
+  Non-negative integer scalar giving the number of retries after the
+  first workbook transport attempt (default
+  `getOption("readAOFM.retries", 1L)`; maximum 5).
+
+- max_bytes:
+
+  Positive finite numeric scalar giving the maximum accepted workbook
+  size in bytes (default
+  `getOption("readAOFM.max_bytes", 100 * 1024^2)`; maximum 1 GiB).
 
 ## Value
 

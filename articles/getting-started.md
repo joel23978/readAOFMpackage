@@ -68,10 +68,11 @@ tb_issuance <- readAOFM::read_aofm("tb", "issuance")
 
 The rendered article executes that same public dispatcher and parser
 with the installed `tb_issuance.xlsx` snapshot substituted at the HTTPS
-transport boundary. The snapshot comes from [AOFM
-media/591](https://www.aofm.gov.au/media/591). The packaged snapshot
-documentation records its verified SHA-256, attribution, and licensing
-context. Live calls retrieve the current workbook instead.
+transport boundary. The snapshot was originally acquired as AOFM media
+item 591; the packaged snapshot documentation records that historical
+acquisition, its verified SHA-256, attribution, and licensing context.
+That identifier is not a live route. Ordinary calls retrieve the current
+direct HTTPS Data Hub workbook route from the local catalogue.
 
 The public return contract is visible directly from the parsed object:
 
@@ -165,6 +166,34 @@ many downloads. `csv = TRUE` preserves the parsed return value and also
 writes the reader’s CSV output under `output/` in the current working
 directory; the network and outputs article provides an isolated example.
 
+The runtime catalogue tracks 30 IDs in total: 23 parser-supported tables
+and seven raw-only/unsupported rows. Use
+`aofm_catalog(include_unsupported = TRUE)` to inspect all direct HTTPS
+source routes and filename extensions before a raw download.
+`portfolio_overview` remains a raw-only historical direct workbook
+because it is not currently listed on the Data Hub; no parser support is
+implied.
+
+## Turnover source transition
+
+The two turnover readers stitch the historical and redesigned current
+AOFM workbooks. Historical turnover covers July 2016 through December
+2025; the redesigned current workbooks begin in January 2026, with no
+gap at the boundary. Current workbooks contain monthly observation
+periods, while the Data Hub is updated quarterly with an approximately
+two-month lag. Historical turnover has mixed source granularity: **By
+Tenor** is monthly and **By Category** is quarterly. Current sheets
+provide `security`, `region`, and `counterparty`; the combined result
+uses `tenor`, `investor_type`, `security`, `region`, and `counterparty`
+groups.
+
+Rows are identified by the natural key `period`, `group`, and `name`.
+Current rows take precedence if the two sources overlap, and duplicate
+keys within a source are rejected. The result carries a two-record
+`aofm_sources` attribute with historical/current roles and raw URL,
+filename, byte-count, and SHA-256 metadata. The durable route and
+boundary record is in `inst/extdata/README-aofm-route-continuity.md`.
+
 ## Retrieve the latest AOFM workbook
 
 Set `READAOFM_RUN_LIVE_EXAMPLES=true` in an interactive or development
@@ -188,4 +217,18 @@ Live readers fetch public workbooks over HTTPS without AOFM credentials.
 They stage each workbook in a temporary file and retrieve the current
 source on every call. AOFM controls upstream availability and workbook
 layout; use the network, outputs, and troubleshooting article for
-bounded transport details and recovery steps.
+bounded transport details and recovery steps. The public transport
+controls are `timeout` (30 seconds per attempt by default), `retries`
+(one retry by default), and `max_bytes` (100 MiB by default).
+
+For an explicit caller-managed copy,
+[`download_aofm_file()`](https://joel23978.github.io/readAOFM/reference/download_aofm_file.md)
+stores verified SHA-256-named workbooks and metadata below
+`.readAOFM/data/<table-id>/` beneath the chosen root (by default
+[`tempdir()`](https://rdrr.io/r/base/tempfile.html)), with bounded
+pruning and writer locking. It is separate from temporary reader staging
+and the legacy `data/`/`output/` writes. Use
+[`aofm_file_metadata()`](https://joel23978.github.io/readAOFM/reference/aofm_file_metadata.md)
+to inspect a local digest and
+[`read_aofm_file()`](https://joel23978.github.io/readAOFM/reference/read_aofm_file.md)
+to parse a local workbook without another network request.

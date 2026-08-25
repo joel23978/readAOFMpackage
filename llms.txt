@@ -63,11 +63,12 @@ tb_issuance <- readAOFM::read_aofm("tb", "issuance")
 
 For a deterministic README and CRAN build, the rendered output below
 runs that same public dispatcher and parser against the installed
-`tb_issuance.xlsx` snapshot. The snapshot is an official AOFM workbook
-from [AOFM media/591](https://www.aofm.gov.au/media/591); its SHA-256
+`tb_issuance.xlsx` snapshot. The snapshot was originally acquired as
+AOFM media item 591; that historical acquisition identifier, SHA-256,
 and provenance are recorded with the [packaged
 snapshots](https://github.com/joel23978/readAOFM/blob/main/inst/extdata/README.md).
-A normal user call uses the current live workbook instead.
+It is not the package’s live route: normal user calls use the current
+direct HTTPS Data Hub workbook route from the local catalogue.
 
 The parsed table is long-form: `date_held` and `maturity` are `Date`
 columns, `name` identifies the measure, and numeric observations are in
@@ -136,12 +137,26 @@ returns one parsed object for a single match and a named list when
 selectors match several tables. Start with a specific pair before
 requesting a whole family.
 
+Version 0.1.1 records two intentional source-shape corrections alongside
+the route update:
+[`read_eom()`](https://joel23978.github.io/readAOFM/reference/read_eom.md)
+preserves the current non-Notes worksheet components (including `Tenor`
+and `Series` where supplied), and syndication measures are returned with
+numeric values. Existing selectors remain valid; inspect names and
+classes when combining results from different AOFM workbook families.
+
 ## Supported AOFM data
 
-The current catalogue contains 23 parsed tables. These table IDs are
-stable catalogue identifiers; the public
+The runtime catalogue contains 30 stable table IDs: 23 parser-supported
+tables and seven raw-only/unsupported rows retained for direct workbook
+access. The public
 [`read_aofm()`](https://joel23978.github.io/readAOFM/reference/read_aofm.md)
-interface normally uses their `security` and `type` selectors.
+interface normally uses the supported rows’ `security` and `type`
+selectors. `aofm_catalog(include_unsupported = TRUE)` exposes the full
+30-row map, including each direct HTTPS source route, its filename, and
+its support status. `portfolio_overview` is the one raw-only historical
+direct workbook that is not currently listed on the Data Hub; the
+catalogue preserves that scope rather than implying parser support.
 
 | AOFM family | Parsed table IDs | Reader and shape |
 |----|----|----|
@@ -184,6 +199,16 @@ readAOFM::search_aofm("issuance")
 readAOFM::search_aofm("treasury bond")
 ```
 
+For stable IDs, inspect the complete offline catalogue before choosing a
+download workflow:
+
+``` r
+
+readAOFM::aofm_catalog(include_unsupported = TRUE)[,
+  c("table_id", "source_url", "file_name", "supported")
+]
+```
+
 Most parsed frames are long, retain source identifiers, and expose
 `name` and `value` measurement columns. Dates handled by a reader are
 returned as `Date` objects. Inspect the actual workbook-derived columns
@@ -219,19 +244,76 @@ Transactional, syndication, secondary, and premium readers use
 `output/<table-id>.csv`; EOFY, EOM, and ownership readers may write one
 file per workbook sheet.
 
+For a caller-managed, verified local copy, use the opt-in integration
+API:
+
+``` r
+
+cache_root <- tempfile("readAOFM-cache-")
+workbook <- readAOFM::download_aofm_file(
+  "tb_issuance", path = cache_root, overwrite = FALSE,
+  timeout = 5, retries = 0, max_bytes = 50 * 1024^2
+)
+readAOFM::aofm_file_metadata(workbook)
+readAOFM::read_aofm_file(workbook, "tb_issuance")
+```
+
+[`download_aofm_file()`](https://joel23978.github.io/readAOFM/reference/download_aofm_file.md)
+stores a SHA-256-named workbook, metadata, and a short-lived writer lock
+below the caller’s `.readAOFM/data/<table-id>/` directory, then prunes
+entries using its age, count, and byte limits. The returned path carries
+the verified source and digest metadata. This managed cache is explicit
+and caller-owned; it is separate from the readers’ temporary staging and
+from the legacy `data/` and `output/` side effects. Use
+[`aofm_file_metadata()`](https://joel23978.github.io/readAOFM/reference/aofm_file_metadata.md)
+and
+[`read_aofm_file()`](https://joel23978.github.io/readAOFM/reference/read_aofm_file.md)
+for offline provenance and local parsing without another network
+request.
+
+### Turnover across the AOFM source transition
+
+`read_secondary("tb_turnover")` and `read_secondary("tib_turnover")`
+join the historical and redesigned current workbooks into one series.
+The historical companions cover July 2016 through December 2025; the
+redesigned current workbooks provide January 2026 onward. The transition
+has no December-to-January gap. Current workbooks contain monthly
+observation periods, while AOFM updates the Data Hub quarterly with an
+approximately two-month lag. Historical turnover has source-specific
+granularity: **By Tenor** is monthly and **By Category** is quarterly.
+Current sheets cover `security`, `region`, and `counterparty`; the
+combined result uses the groups `tenor`, `investor_type`, `security`,
+`region`, and `counterparty`.
+
+Rows are joined by the natural key `period`, `group`, and `name`. If
+sources overlap, the current workbook takes precedence; duplicate keys
+within a source are rejected. The returned data frame has an
+`aofm_sources` attribute containing the historical/current source URLs,
+roles, filenames, byte counts, and SHA-256 digests. The [AOFM Data
+Hub](https://www.aofm.gov.au/data-hub) is the primary source; exact
+route and boundary evidence is kept in the package file
+`inst/extdata/README-aofm-route-continuity.md`.
+
 ## Retrieval and reproducibility
 
 - `search_aofm(query)` with `read = FALSE` is local and network-free.
 - Readers and `search_aofm(..., read = TRUE)` fetch public AOFM
   workbooks over HTTPS.
-- Downloads use a 15-second connection timeout, a 120-second transfer
-  limit, a low-speed abort after 30 seconds below 1 KiB/s, and a 100 MiB
-  file limit.
+- Downloads use a 30-second per-attempt timeout by default, retry once,
+  and reject workbooks larger than 100 MiB by default. Set `timeout`,
+  `retries`, and `max_bytes` on public readers/downloaders to apply
+  tighter bounds.
 - Public AOFM workbooks are available without a package username,
   password, or API key.
 - Readers stage each workbook in a temporary file and fetch the current
   source on each call; repeating a read can therefore return a newer
-  workbook.
+  workbook. They do not create a persistent package cache.
+- [`download_aofm_file()`](https://joel23978.github.io/readAOFM/reference/download_aofm_file.md)
+  is the opt-in managed cache API. It uses a caller- selected root
+  (default [`tempdir()`](https://rdrr.io/r/base/tempfile.html)), writes
+  only beneath `.readAOFM/data/<table-id>/`, and exposes bounded pruning
+  and provenance metadata. It never writes to the package installation
+  or global workspace.
 - `csv = TRUE` writes to `output/` and
   [`download_aofm_xlsx()`](https://joel23978.github.io/readAOFM/reference/download_aofm_xlsx.md)
   writes to `data/` relative to the current working directory.
@@ -239,13 +321,16 @@ file per workbook sheet.
 ## Scope and limitations
 
 The parser-supported catalogue contains the 23 tables listed above.
-Seven additional catalogue entries are available only through raw
-workbook download: `tb_issuance_conversion`, `indexation_factors`,
-`rmbs_transactions`, `rmbs_auctions`, `interest_rate_swaps`,
-`cross_currency_swaps`, and `portfolio_overview`. Their selector fields
-are empty, so an unfiltered
+Seven additional catalogue entries are raw-only/unsupported and
+available through direct raw workbook download:
+`tb_issuance_conversion`, `indexation_factors`, `rmbs_transactions`,
+`rmbs_auctions`, `interest_rate_swaps`, `cross_currency_swaps`, and
+`portfolio_overview`. Their selector fields are empty, so an unfiltered
 [`download_aofm_xlsx()`](https://joel23978.github.io/readAOFM/reference/download_aofm_xlsx.md)
 call is the available route and also selects the rest of the catalogue.
+`aofm_catalog(include_unsupported = TRUE)` shows their verified direct
+source URLs and `.xls`/`.xlsx` destination names; the extension is kept
+aligned for each raw-only row.
 [`search_aofm()`](https://joel23978.github.io/readAOFM/reference/search_aofm.md)
 excludes these entries from its supported rows; its fallback token
 matching can still return a supported row for a query that contains a
@@ -256,11 +341,14 @@ HTML error page, network failure, or changed sheets/columns can make a
 read fail. The package validates HTTP responses, workbook signatures,
 sheet counts, and required columns and reports the table context.
 
-Public readers focus on catalogue-selected AOFM sources; they do not
-accept a local workbook path. Identifier columns follow each workbook
-family and can differ across sources. Live reads represent the current
-AOFM workbook rather than a versioned data snapshot, while the five
-packaged snapshots provide fixed inputs for documentation and tests.
+Public readers focus on catalogue-selected AOFM sources. Use
+[`read_aofm_file()`](https://joel23978.github.io/readAOFM/reference/read_aofm_file.md)
+when a local workbook path is intentional; it validates the
+parser-supported table ID and performs no download. Identifier columns
+follow each workbook family and can differ across sources. Live reads
+represent the current AOFM workbook rather than a versioned data
+snapshot, while the five packaged snapshots provide fixed inputs for
+documentation and tests.
 
 | Symptom | What to check |
 |----|----|
@@ -269,6 +357,7 @@ packaged snapshots provide fixed inputs for documentation and tests.
 | HTML or invalid-workbook error | The source may have redirected or returned an error page instead of an Excel workbook; report the table ID and URL if it persists. |
 | Missing sheet or required-column error | AOFM may have changed the workbook layout; report the table ID, error, and access date. |
 | Cannot create `data/` or `output/` | Use a writable project directory, or leave `csv = FALSE` and avoid raw downloads. |
+| Managed cache cannot be written or verified | Choose a caller-owned writable `path`, inspect [`aofm_file_metadata()`](https://joel23978.github.io/readAOFM/reference/aofm_file_metadata.md), or parse a local workbook directly with [`read_aofm_file()`](https://joel23978.github.io/readAOFM/reference/read_aofm_file.md). |
 
 ## Citation, licensing, and attribution
 
@@ -306,11 +395,19 @@ guidance is in `CONTRIBUTING.md` at the repository root.
   : Read and tidy one or more AOFM Data Hub tables
 - [`search_aofm()`](https://joel23978.github.io/readAOFM/reference/search_aofm.md)
   : Search the supported AOFM table catalogue
+- [`aofm_catalog()`](https://joel23978.github.io/readAOFM/reference/aofm_catalog.md)
+  : List AOFM data tables known to the package
 
 ## Download raw workbooks
 
 - [`download_aofm_xlsx()`](https://joel23978.github.io/readAOFM/reference/download_aofm_xlsx.md)
   : Download raw AOFM Data Hub workbooks
+- [`download_aofm_file()`](https://joel23978.github.io/readAOFM/reference/download_aofm_file.md)
+  : Download one AOFM workbook by stable table ID
+- [`aofm_file_metadata()`](https://joel23978.github.io/readAOFM/reference/aofm_file_metadata.md)
+  : Exact provenance for a local AOFM workbook
+- [`read_aofm_file()`](https://joel23978.github.io/readAOFM/reference/read_aofm_file.md)
+  : Parse a local AOFM workbook
 
 ## Positions and holdings
 

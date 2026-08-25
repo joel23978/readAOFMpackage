@@ -21,7 +21,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">readAOFM</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -64,7 +64,8 @@ workbook I/O. Readers fetch public AOFM Data Hub workbooks and can
 optionally write parsed CSV files, while <code><a href="../reference/search_aofm.html">search_aofm()</a></code>
 searches installed metadata. The examples below keep every write in an
 isolated temporary directory and use a packaged workbook snapshot for
-deterministic parsing.</p>
+deterministic parsing. The package’s managed download API is explicit,
+so ordinary reader calls do not create a persistent cache.</p>
 <div class="section level2">
 <h2 id="network-and-staging-behavior">Network and staging behavior<a class="anchor" aria-label="anchor" href="#network-and-staging-behavior"></a>
 </h2>
@@ -93,7 +94,7 @@ repeatable and no network request is made.</p>
 <code class="sourceCode R"><span><span class="va">csv_probe</span> <span class="op">&lt;-</span> <span class="fu">with_temp_working_directory</span><span class="op">(</span><span class="op">{</span></span>
 <span>  <span class="va">parsed</span> <span class="op">&lt;-</span> <span class="fu">testthat</span><span class="fu">::</span><span class="fu"><a href="https://testthat.r-lib.org/reference/local_mocked_bindings.html" class="external-link">with_mocked_bindings</a></span><span class="op">(</span></span>
 <span>    <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="../reference/read_aofm.html">read_aofm</a></span><span class="op">(</span><span class="st">"tb"</span>, <span class="st">"issuance"</span>, csv <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
-<span>    download_aofm_table_workbook <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">aofm_table</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    download_aofm_table_workbook <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">aofm_table</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
 <span>      <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">aofm_table</span>, <span class="st">"tb_issuance"</span><span class="op">)</span><span class="op">)</span></span>
 <span>      <span class="va">tb_issuance_fixture</span></span>
 <span>    <span class="op">}</span>,</span>
@@ -131,7 +132,58 @@ repeatable and no network request is made.</p>
 <code><a href="../reference/download_aofm_xlsx.html">download_aofm_xlsx()</a></code> has different behavior: it saves
 source workbooks beneath <code>data/</code> and is intended for an
 explicitly writable project directory. Neither output path is a package
-cache.</p>
+cache. The public transport bounds are <code>timeout</code> (30 seconds
+per attempt by default), <code>retries</code> (one retry), and
+<code>max_bytes</code> (100 MiB); pass them explicitly when a script
+needs tighter limits.</p>
+</div>
+<div class="section level2">
+<h2 id="managed-downloads-and-offline-parsing">Managed downloads and offline parsing<a class="anchor" aria-label="anchor" href="#managed-downloads-and-offline-parsing"></a>
+</h2>
+<p><code><a href="../reference/download_aofm_file.html">download_aofm_file()</a></code> is the opt-in workflow for
+retaining a verified current workbook. It stores a SHA-256-named
+<code>.xls</code>/<code>.xlsx</code> file, <code>current.rds</code>
+provenance, and a short-lived writer lock beneath the caller’s
+<code>.readAOFM/data/&lt;table-id&gt;/</code> directory. Age,
+file-count, and total-byte limits prune old entries. The cache root
+defaults to <code><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir()</a></code> and can be set with the function’s
+<code>path</code> argument. The returned path carries source URL,
+filename, byte-count, SHA-256, retrieval time, and cache-hit
+metadata.</p>
+<p><code><a href="../reference/aofm_file_metadata.html">aofm_file_metadata()</a></code> computes local byte-level
+provenance without network or cache writes.
+<code><a href="../reference/read_aofm_file.html">read_aofm_file()</a></code> parses a local workbook using the same
+family parser selected by its stable table ID. This is useful for a
+downloaded file or an installed fixture:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">local_metadata</span> <span class="op">&lt;-</span> <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="../reference/aofm_file_metadata.html">aofm_file_metadata</a></span><span class="op">(</span></span>
+<span>  <span class="va">tb_issuance_fixture</span>,</span>
+<span>  table_id <span class="op">=</span> <span class="st">"tb_issuance"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">local_parsed</span> <span class="op">&lt;-</span> <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="../reference/read_aofm_file.html">read_aofm_file</a></span><span class="op">(</span></span>
+<span>  <span class="va">tb_issuance_fixture</span>,</span>
+<span>  table_id <span class="op">=</span> <span class="st">"tb_issuance"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">local_metadata</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"table_id"</span>, <span class="st">"raw_bytes"</span>, <span class="st">"raw_sha256"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt; $table_id</span></span>
+<span><span class="co">#&gt; [1] "tb_issuance"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $raw_bytes</span></span>
+<span><span class="co">#&gt; [1] 209385</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $raw_sha256</span></span>
+<span><span class="co">#&gt; [1] "4f74568d37258a6fad7b80136cdd64a29341f7bfa8550d2a4d7f8cc785e2e5c9"</span></span>
+<span><span class="fu">utils</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">local_parsed</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"date_held"</span>, <span class="st">"name"</span>, <span class="st">"value"</span><span class="op">)</span><span class="op">]</span>, <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 3</span></span></span>
+<span><span class="co">#&gt;   date_held  name                value</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;date&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> 1982-08-05 coupon                 16</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> 1982-08-05 amount_offered  200<span style="text-decoration: underline;">000</span>000</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> 1982-08-05 amount_allotted 200<span style="text-decoration: underline;">000</span>000</span></span></code></pre></div>
+<p>The local path is not silently treated as a current source:
+standalone metadata records its local modification time and omits a
+source URL. Managed cache metadata remains qualified only while its
+file, digest, and catalogue identity agree.</p>
 </div>
 <div class="section level2">
 <h2 id="multi-result-calls-and-cost">Multi-result calls and cost<a class="anchor" aria-label="anchor" href="#multi-result-calls-and-cost"></a>
@@ -142,7 +194,7 @@ Treasury Bond, Treasury Indexed Bond, and Treasury Note issuance, and it
 downloads each workbook. A security-only call such as
 <code>read_aofm("tb")</code> similarly reads every supported Treasury
 Bond table. Search first to see the exact set and generated calls:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">issuance</span> <span class="op">&lt;-</span> <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="../reference/search_aofm.html">search_aofm</a></span><span class="op">(</span><span class="st">"issuance"</span><span class="op">)</span></span>
 <span><span class="va">issuance</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"security"</span>, <span class="st">"type"</span>, <span class="st">"id"</span>, <span class="st">"read_call"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;   security     type           id                    read_call</span></span>
@@ -157,7 +209,7 @@ network and parsing cost is intended.</p>
 <h2 id="common-errors-and-recovery">Common errors and recovery<a class="anchor" aria-label="anchor" href="#common-errors-and-recovery"></a>
 </h2>
 <p>Selector validation happens locally before any AOFM request:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span></span>
 <span>  <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="../reference/read_aofm.html">read_aofm</a></span><span class="op">(</span><span class="st">"not-a-security"</span><span class="op">)</span>,</span>
 <span>  error <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">error</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">conditionMessage</a></span><span class="op">(</span><span class="va">error</span><span class="op">)</span></span>
@@ -179,10 +231,33 @@ access date.</li>
 <li>If a CSV or raw download cannot be written, switch to a writable
 project directory or leave <code>csv = FALSE</code>.</li>
 </ol>
-<p>The package does not accept a local workbook path through the public
-readers. For deterministic checks, use the packaged snapshots as above
-and keep any temporary working directory isolated from analysis
-outputs.</p>
+<p>For deterministic checks, use the packaged snapshots with
+<code><a href="../reference/read_aofm_file.html">read_aofm_file()</a></code> as above and keep any temporary working
+directory isolated from analysis outputs. The legacy readers
+intentionally remain catalogue-first; the local-file API separates
+retrieval from parsing when a caller needs that control.</p>
+</div>
+<div class="section level2">
+<h2 id="turnover-source-transition">Turnover source transition<a class="anchor" aria-label="anchor" href="#turnover-source-transition"></a>
+</h2>
+<p><code>read_secondary("tb_turnover")</code> and
+<code>read_secondary("tib_turnover")</code> stitch historical companions
+covering July 2016 through December 2025 to redesigned current workbooks
+beginning in January 2026. Current workbooks contain monthly observation
+periods, while the Data Hub is updated quarterly with an approximately
+two-month lag. Historical <strong>By Tenor</strong> observations are
+monthly; historical <strong>By Category</strong> observations are
+quarterly. Current sheets provide <code>security</code>,
+<code>region</code>, and <code>counterparty</code>; the combined groups
+are <code>tenor</code>, <code>investor_type</code>,
+<code>security</code>, <code>region</code>, and
+<code>counterparty</code>.</p>
+<p>The natural key is <code>period</code>, <code>group</code>, and
+<code>name</code>. Current rows take precedence on overlap, duplicate
+keys within a source are rejected, and the returned data frame carries a
+two-record <code>aofm_sources</code> attribute with historical/current
+roles and raw SHA-256 metadata. See the route-continuity record for the
+exact source URLs and boundary evidence.</p>
 </div>
 <div class="section level2">
 <h2 id="optional-live-troubleshooting-probe">Optional live troubleshooting probe<a class="anchor" aria-label="anchor" href="#optional-live-troubleshooting-probe"></a>
@@ -190,7 +265,7 @@ outputs.</p>
 <p>This normal live call is opt-in. It is disabled during ordinary
 vignette and CRAN builds, so rendering remains deterministic and
 offline.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive</a></span><span class="op">(</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"READAOFM_RUN_LIVE_EXAMPLES"</span><span class="op">)</span>, <span class="st">"true"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">live</span> <span class="op">&lt;-</span> <span class="fu">readAOFM</span><span class="fu">::</span><span class="fu"><a href="../reference/read_aofm.html">read_aofm</a></span><span class="op">(</span><span class="st">"tb"</span>, <span class="st">"issuance"</span><span class="op">)</span></span>
 <span>  <span class="fu">utils</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">live</span>, <span class="fl">3</span><span class="op">)</span></span>
